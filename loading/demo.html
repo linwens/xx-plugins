@@ -3,9 +3,32 @@
 <head>
 	<meta charset="UTF-8">
 	<title>loading插件</title>
+	<style>
+		#J_loading{
+			width: 200px;
+			height: 200px;
+			margin: 0 auto;
+			background: #CFCFCF;
+		}
+		#J_progress{
+			height: 20px;
+			background: #1FD9D0;
+			border-radius: 20px;
+		}
+	</style>
+	<script src="https://www.shy-u.xyz/plugins/jquery.js"></script>
 </head>
 <body>
-	<div></div>
+	<div>
+		<div id="J_loading">
+			<div id="J_progress" style="width: 20%;"></div>
+			<span id="J_val">20%</span>
+		</div>
+	</div>
 	<script src="xx-loading.js"></script>
+	<script>
+		var loading = xLoading('J_loading');
+		console.log(loading)
+	</script>
 </body>
 </html>
