@@ -27,8 +27,13 @@
 	</div>
 	<script src="xx-loading.js"></script>
 	<script>
-		var loading = xLoading('J_loading');
-		console.log(loading)
+		var loading = xLoading('J_loading'),
+			prgDom = loading.prgDom('J_progress'),
+			valDom = loading.valDom('J_val');
+		console.log(loading);
+		loading.progress(100,function(){
+			console.log('100%');
+		})
 	</script>
 </body>
 </html>
