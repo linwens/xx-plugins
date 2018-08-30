@@ -31,7 +31,10 @@
 			prgDom = loading.prgDom('J_progress'),
 			valDom = loading.valDom('J_val');
 		console.log(loading);
-		loading.progress(100,function(){
+		loading.progress(80, 500, function(){
+			console.log('80%');
+		})
+		loading.complete(100, function(){
 			console.log('100%');
 		})
 	</script>
