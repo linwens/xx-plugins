@@ -17,13 +17,29 @@
 	xLD.fn = xLD.prototype = {
 		contructor: xLD,
 		prgDom:function(selector){
-			//获取进度条元素
-			var $prg = this.$prg = document.getElementById(selector)
+			//获取进度条展示元素
+			var $prg = null;
+			if(!selector){
+				$prg = document.createElement('b');
+				$prg.id = "J_val";
+				this[0].appendChild($prg);
+				this.$prg = $prg;
+			}else{
+				$prg = this.$prg = document.getElementById(selector);
+			}
 			return $prg;
 		},
 		valDom:function(selector){
-			//获取进度条元素
-			var $val = this.$val = document.getElementById(selector);
+			//获取进度值展示元素
+			var $val = null;
+			if(!selector){
+				$val = document.createElement('b');
+				$val.id = "J_val";
+				this[0].appendChild($val);
+				this.$val = $val;
+			}else{
+				$val = this.$val = document.getElementById(selector);
+			}
 			return $val;
 		},
 		add:function(incre, speed, cb){//增量，数字变化时间间隔，回调函数
@@ -56,7 +72,7 @@
 			}else{
 				_self.prg++;
 				_self.$prg.style.width = _self.prg+'%';
-				_self.$val.innerText = _self.prg+'%';
+				_self.$val.innerText = _self.prg;
 				progress.call(_self,phase, _speed, cb);
 			}
 		}, _speed);//间隔时间动态
