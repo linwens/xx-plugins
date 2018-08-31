@@ -5,11 +5,14 @@
  *
  *github地址：
  *实现的功能：
- *1、
+ *1、放在页面开头
  *2、避免加载太久，提供一个直接完成的接口
 **/
 
 (function(window, document){
+	//资源初始化时间点
+	var start = new Date().getTime();
+	console.log(start);
 	var xLD = function(box){
 		return new xLD.fn.init(box);
 	}
@@ -80,6 +83,9 @@
 
 	//设置实例
 	var init = xLD.fn.init = function(box){
+		var now = new Date().getTime();
+		this.cost = now - start;
+		console.log('cost==>'+this.cost);//页面加载完成过去的时间
 		this.prg = 0;//进度条具体值
 		this.timer = 0;//定时器
 		this.next = this.prg;//增量进度，实现
