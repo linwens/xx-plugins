@@ -10,12 +10,12 @@
 **/
 
 (function(window, document){
-	var xLoading = function(box){
-		return new xLoading.fn.init(box);
+	var xLD = function(box){
+		return new xLD.fn.init(box);
 	}
 	//存放原型上的方法
-	xLoading.fn = xLoading.prototype = {
-		contructor: xLoading,
+	xLD.fn = xLD.prototype = {
+		contructor: xLD,
 		prgDom:function(selector){
 			//获取进度条元素
 			var $prg = this.$prg = document.getElementById(selector)
@@ -26,51 +26,52 @@
 			var $val = this.$val = document.getElementById(selector);
 			return $val;
 		},
-		progress:function(phase, speed, cb){//进度主函数(进度值，数字变化时间间隔，回调函数)
-			var _self = this;
-			var _speed = this.random(speed);//随机化间隔时间，更真实
-			this.timer = window.setTimeout(function(){
-				console.log(_self.prg);
-				if(_self.prg>=phase){
-					window.clearInterval(_self.timer);
-					_self.prg=phase
-					cb&&cb();
-				}else{
-					_self.prg++;
-					_self.$prg.style.width = _self.prg+'%';
-					_self.$val.innerText = _self.prg+'%';
-					_self.progress(phase, _speed, cb);
-				}
-			}, _speed);//间隔时间动态
-		},
-		add:function(phase, speed, cb){//传值
+		add:function(incre, speed, cb){//增量，数字变化时间间隔，回调函数
 			//传得值要和当前已经累加到的值next作比较
-			// if(this.next + phase >=100){
-			// 	this.next = 100;
-			// }else{
-			// 	this.next += phase;
-			// }
-			this.progress(phase, speed, cb);
+			if(this.next + incre >=100){
+				this.next = 100;
+			}else{
+				this.next += incre;
+			}
+			progress.apply(this,[this.next, speed, cb]);
+			//this.progress(this.next, speed, cb);
 		},
 		complete:function(speed,cb){
-			console.log('do complete');
-			this.progress(100, speed, cb);
+			this.add(100, speed, cb);
 		},
 		random:function(n){
-
 			return n+(100-Math.random()*200);//{n-100,n+100}
 		}
 	}
+	//进度主函数(进度值，数字变化时间间隔，回调函数),写这里是为了不把progress函数对外暴露
+	function progress(phase, speed, cb){
+		var _self = this;
+		var _speed = this.random(speed);//随机化间隔时间，更真实
+		window.clearInterval(this.timer);//如果上一轮定时器未走完，新定时器已启动，新的覆盖旧的
+		this.timer = window.setTimeout(function(){
+			if(_self.prg>=phase){
+				window.clearInterval(_self.timer);
+				_self.prg=phase
+				cb&&cb();
+			}else{
+				_self.prg++;
+				_self.$prg.style.width = _self.prg+'%';
+				_self.$val.innerText = _self.prg+'%';
+				progress.call(_self,phase, _speed, cb);
+			}
+		}, _speed);//间隔时间动态
+	}
+
 	//设置实例
-	var init = xLoading.fn.init = function(box){
+	var init = xLD.fn.init = function(box){
 		this.prg = 0;//进度条具体值
 		this.timer = 0;//定时器
-		//this.next = this.prg;//增量进度，实现
+		this.next = this.prg;//增量进度，实现
 		this[0] = document.getElementById(box);//指定进度条根dom元素
 		return this;
 	}
 	//拿到公共方法
-	init.prototype = xLoading.fn;
+	init.prototype = xLD.fn;
 
-	window.xLoading = xLoading;
+	window.xLD = xLD;
 })(window, document)

@@ -27,16 +27,19 @@
 	</div>
 	<script src="xx-loading.js"></script>
 	<script>
-		var loading = xLoading('J_loading'),
-			prgDom = loading.prgDom('J_progress'),
-			valDom = loading.valDom('J_val');
+		var loading = xLD('J_loading'),
+			prgDom = loading.prgDom('J_progress'),//显示进度条动画
+			valDom = loading.valDom('J_val');//显示进度条数字
 		console.log(loading);
-		loading.progress(80, 500, function(){
+		loading.add(80, 500, function(){
 			console.log('80%');
-		})
-		loading.complete(100, function(){
-			console.log('100%');
-		})
+		});
+		setTimeout(function(){
+			loading.complete(100, function(){
+				console.log('100%');
+			})
+		}, 30000);
+		
 	</script>
 </body>
 </html>
