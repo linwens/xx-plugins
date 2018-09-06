@@ -1,7 +1,7 @@
 /**
  *思路：1、https://github.com/amfe/lib-flexible/blob/2.0/index.js
  *2、https://juejin.im/post/5b0a9f266fb9a07aa114a908
- *3、https://github.com/hbxeagle/rem
+ *3、https://github.com/hbxeagle/rem  (在chrome上模拟，demo提到的一些bug没显示出来，但是在老机型上应该还是存在的)
  *知识点：
  *1、在javascript中，可以通window.devicePixelRatio获取到当前设备的dpr；dpr=物理像素/设备独立像素(css像素)
  *2、通过document.documentElement.clientWidth获取deviceWidth；
@@ -21,12 +21,14 @@
 	var docEl = document.documentElement;//返回文档的文档元素，即HTML元素
 	var metaEl = document.querySelector('meta[name="viewport"]');//找到meta[viewport]元素
 	var htmlStyle = window.getComputedStyle(docEl,null);
-	console.log(htmlStyle);
+	// var htmlFontSize = parseFloat(htmlStyle.getPropertyValue('font-size'));//获取到系统字体大小
+	// console.log(document.getElementsByTagName('html')[0]===docEl);
+	// console.log(htmlStyle);
 	//如果页面没设置meta viewport,增加设置。如果不设置meta viewport 默认页面宽度980px;虽然不影响rem，但计算的数值会让人难以理解。所以强制单倍
 	if(metaEl){
 		metaEl.setAttribute('content','width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
 	}else{
-		console.warn('当前页面未设置meta[name="viewpoer"],默认设备宽度会取980px');
+		console.warn('当前页面未设置meta[name="viewport"],默认设备宽度会取980px');
 		metaEl = document.createElement('meta');
 		metaEl.setAttribute('name','viewport');
 		metaEl.setAttribute('content','width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0')
@@ -39,19 +41,39 @@
 		    wrap = null;//清除掉wrap,节省内存
 		}
 	}
+	//
 	//设置基础值,如：1rem = 100px,因为方便换算，不管什么尺寸的设计稿，rem换算的时候都是除以100
 	function setRemUnit(){
-		var rem = (docEl.clientWidth/designW)*100;//1rem = 100px；如果设计稿是750，就相当于设备宽是7.5rem；
+		//由于js去font-size值的时候浏览器进行了四舍五入，所以换个style属性（如width）取1rem对应的px值
+		var d = null;//每次执行先清缓存
+		d = document.createElement('div');
+		d.style.width = '1rem';d.style.display = 'none';
+		var head = document.getElementsByTagName('head')[0];
+		head.appendChild(d);
+		var defaultFontSize = parseFloat(window.getComputedStyle(d, null).getPropertyValue('width'))
+		console.log(defaultFontSize);
+		//考虑横竖屏的问题,在head的style标签里增加媒体查询
+		var st = document.createElement('style');
+		var portait = "@media screen and (min-width:"+docEl.clientWidth+"px){html{font-size:"+((docEl.clientWidth/designW)*100/defaultFontSize)*100+"%;}}";
+		var landscape = "@media screen and (min-width:"+docEl.clientHeight+"px){html{font-size:"+((docEl.clientHeight/designW)*100/defaultFontSize)*100+"%;}}";
+		st.innerHTML = portait+landscape;
+		head.appendChild(st);
+		//var rem = (docEl.clientWidth/designW)*100+'px';//1rem = 100px；如果设计稿是750，就相当于设备宽是7.5rem；
+		var rem = ((docEl.clientWidth/designW)*100/defaultFontSize)*100 + '%';//设百分比值，16px为浏览器默认根节点html的font-size大小
 		var dpr = window.devicePixelRatio || 1; //获取设备像素比,页面字体适配，0.5px兼容会用到
-		docEl.style.fontSize = rem + 'px';
+		docEl.style.fontSize = rem;
 		//给html元素设置一个data-dpr属性，存放设备dpr值用于媒体查询实现响应式
 		docEl.setAttribute('data-dpr', dpr);
+		console.log(docEl.style.fontSize)
 	}
 	setRemUnit();
 	
 	console.log(htmlStyle['float']);
 	console.log(htmlStyle.getPropertyValue('float'));
-	//
+	//增加横竖屏切换的监听
+	window.onorientationchange = function(){
+		window.location.reload();//直接重新加载页面
+	};
 	window.addEventListener('resize', setRemUnit);//监听页面缩放
 	window.addEventListener('pageshow',function(e){//onload 事件在页面第一次加载时触发， onpageshow 事件在每次加载页面时触发,不同事件，回调函数中的event/e对象不同
 		//https://developer.mozilla.org/zh-CN/docs/Web/Events/pageshow
@@ -60,4 +82,4 @@
 		}
 	});
 
-})(window, document, 750);
+})(window, document, 640);
