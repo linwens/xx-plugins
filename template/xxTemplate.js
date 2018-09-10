@@ -17,7 +17,16 @@
  *
 **/
 ;(function(window, document){
-	var xxTPL = function(){};
+	var xxTPL = function(){
+		//定义函数体内容
+		var code = '';
+		//声明函数
+		var fn = new Function(code);//这样声明的函数的最后一个参数是个字符串，它包含整个函数体的代码
+		//声明渲染函数，为了链式调用，所以使用this
+		this.render = function(model){
+			return fn.apply(model);
+		}
+	};
 
 	window.xxTPL = xxTPL;
 })(window, document);
