@@ -31,4 +31,25 @@
 
 	window.xxTPL = xxTPL;
 	
+	//test
+	var tpl_test = document.getElementById('J_test').innerHTML;
+	var html_box = document.getElementById('J_html');
+	console.log(tpl_test);
+	console.log(html_box);
+	//拼字符串
+	var str = "var p = []; p.push('";
+	str += tpl_test.replace(/[\r\t\n]/g, "")
+		.replace(/<%=(.*?)%>/g, "');p.push($1);p.push('")
+		.replace(/<%/g, "');")
+		.replace(/%>/g, "p.push('");
+	str += "');return p.join('')"
+	console.log(str);
+	//数据
+	var users = [
+		{ "name": "Byron", "url": "http://localhost" },
+		{ "name": "Casper", "url": "http://localhost" },
+		{ "name": "Frank", "url": "http://localhost" }
+	];
+	var fn = new Function("users",str);
+	html_box.innerHTML = fn(users);
 })(window, document);

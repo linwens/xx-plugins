@@ -5,9 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>xxTemplate</title>
-    <script src="xxTemplate.js"></script>
 </head>
 <body>
-    
+    <div id="J_html"></div>
+    <script type="text/plain" id="J_test">
+        <%for( var i = 0;i < users.length; i++){%>
+            <li>
+                <a href="<%=users[i].url%>">
+                    <%=users[i].name%>
+                </a>
+            </li>
+        <% } %>
+    </script>
+    <script src="xxTemplate.js"></script>
 </body>
 </html>
