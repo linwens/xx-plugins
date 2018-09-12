@@ -26,7 +26,10 @@
 			.replace(/<%/g, "');")
 			.replace(/%>/g, "p.push('");
 		code += "');return p.join('')"
-		
+		//上面的正则匹配要优化
+
+
+
 		//声明函数,这个函数体里的内容会根据模板动态修改
 		var fn = new Function("data",code);//这样声明的函数的最后一个参数是个字符串，它包含整个函数体的代码
 		//声明渲染函数，为了链式调用，所以使用this
@@ -37,5 +40,6 @@
 	};
 
 	window.xxTPL = xxTPL;
+	
 
 })(window, document);
