@@ -9,14 +9,30 @@
 <body>
     <div id="J_html"></div>
     <script type="text/plain" id="J_test">
-        <%for( var i = 0;i < users.length; i++){%>
+        <%for( var i = 0;i < data.length; i++){%>
             <li>
-                <a href="<%=users[i].url%>">
-                    <%=users[i].name%>
+                <a href="<%=data[i].url%>">
+                    <%=data[i].name%>
                 </a>
             </li>
         <% } %>
     </script>
     <script src="xxTemplate.js"></script>
+    <script>
+        //数据
+        var users = [
+            { "name": "Byron", "url": "http://localhost" },
+            { "name": "Casper", "url": "http://localhost" },
+            { "name": "Frank", "url": "http://localhost" }
+        ];
+        var tpl_test = document.getElementById('J_test').innerHTML;
+        var html_box = document.getElementById('J_html');
+        
+        //开始渲染
+        var compiler = xxTPL(tpl_test);
+        
+        html_box.innerHTML = compiler(users);
+
+    </script>
 </body>
 </html>

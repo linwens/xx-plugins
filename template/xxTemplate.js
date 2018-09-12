@@ -18,38 +18,24 @@
  *
 **/
 ; (function (window, document) {
-	var xxTPL = function () {
+	var xxTPL = function (tpl) {
 		//定义函数体内容
-		var code = '';
-		//声明函数
-		var fn = new Function(code);//这样声明的函数的最后一个参数是个字符串，它包含整个函数体的代码
+		var code = "var p = []; p.push('";
+		code += tpl.replace(/[\r\t\n]/g, "")
+			.replace(/<%=(.*?)%>/g, "');p.push($1);p.push('")
+			.replace(/<%/g, "');")
+			.replace(/%>/g, "p.push('");
+		code += "');return p.join('')"
+		
+		//声明函数,这个函数体里的内容会根据模板动态修改
+		var fn = new Function("data",code);//这样声明的函数的最后一个参数是个字符串，它包含整个函数体的代码
 		//声明渲染函数，为了链式调用，所以使用this
-		this.render = function (model) {
-			return fn.apply(model);
+		var render = function (data) {
+			return fn.apply(this, [data]);
 		}
+		return render;
 	};
 
 	window.xxTPL = xxTPL;
-	
-	//test
-	var tpl_test = document.getElementById('J_test').innerHTML;
-	var html_box = document.getElementById('J_html');
-	console.log(tpl_test);
-	console.log(html_box);
-	//拼字符串
-	var str = "var p = []; p.push('";
-	str += tpl_test.replace(/[\r\t\n]/g, "")
-		.replace(/<%=(.*?)%>/g, "');p.push($1);p.push('")
-		.replace(/<%/g, "');")
-		.replace(/%>/g, "p.push('");
-	str += "');return p.join('')"
-	console.log(str);
-	//数据
-	var users = [
-		{ "name": "Byron", "url": "http://localhost" },
-		{ "name": "Casper", "url": "http://localhost" },
-		{ "name": "Frank", "url": "http://localhost" }
-	];
-	var fn = new Function("users",str);
-	html_box.innerHTML = fn(users);
+
 })(window, document);
