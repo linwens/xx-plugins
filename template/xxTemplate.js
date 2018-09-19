@@ -50,14 +50,15 @@
 			inter:/<%([\s\S]+?)%>/g, //插入表达式
 		}
 		//抄袭underscore拼接字符串
-		var code = "var __p = '';\n __p+='";
+		var code = "var __t;var __p = '';\n __p+='";
 		// code += tpl.replace(/[\r\t\n]/g, "")
 		// 	.replace(/<%=([\s\S]+?)%>/g, "'+$1+'")
 		// 	.replace(/<%([\s\S]+?)%>/g, "';$1 __p+='");
 		// code += "';return __p";
 		code += tpl.replace(escapeReg, escapeChar)
 			.replace(settings.eval, function(m,eval){
-				return "'+ "+ eval +"+'"
+				//还要考虑没有匹配项的情况 如：(__t='fff')就相当于'fff'
+				return "'+ ((__t=("+eval+"))==null?'':__t) +'"
 			})
 			.replace(settings.inter, function(m,inter){
 				return "';\n "+ inter +"\n __p+='"
