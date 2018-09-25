@@ -3,7 +3,7 @@
  *  1、underscore.js源码1.9.1：https://github.com/jashkenas/underscore/blob/master/underscore.js
  *  2、廖雪峰教程：https://www.liaoxuefeng.com/article/001426512790239f83bfb47b1134b63b09a57548d06e5c5000
  *  3、冴羽的文章：https://segmentfault.com/a/1190000012501120
- *  4、
+ *  4、artTemplate原理：https://cdc.tencent.com/2012/06/15/高性能javascript模板引擎原理解析/
  *设计模式：
  *涉及的关键方法：
  *  1、new Function();
@@ -21,14 +21,6 @@
 **/
 ; (function (window, document) {
 	var xxTPL = function (tpl) {
-		//定义函数体内容
-		// var code = "var p = []; p.push('";
-		// code += tpl.replace(/[\r\t\n]/g, "")
-		// 	.replace(/<%=(.*?)%>/g, "');p.push($1);p.push('")
-		// 	.replace(/<%/g, "');")
-		// 	.replace(/%>/g, "p.push('");
-		// code += "');return p.join('')";
-		
 		//处理特殊字符 单引号' 反斜杠\ 换行\n 回车\r 行分隔符u2028 段落分隔符u2029
 		var escapes = {//对应处理
 			"'": "'",
@@ -47,29 +39,35 @@
 		//设置插值、插入表达式对应的正则可配
 		var settings = {
 			eval:/<%=([\s\S]+?)%>/g, //插值
-			inter:/<%([\s\S]+?)%>/g, //插入表达式
+			inter:/<%([\s\S]+?)%>/g, //插入js语句
 		}
-		//抄袭underscore拼接字符串
+		//抄袭underscore，优化replace
+		var index = 0;
+		var matcher = RegExp([
+			(settings.eval).source,
+			(settings.inter).source
+		].join("|")+"|$", "g");//|$的目的是在replace的时候，offset获取到字符串的结束位置的索引
+		//字符首部
 		var code = "var __t;var __p = '';\n __p+='";
-		// code += tpl.replace(/[\r\t\n]/g, "")
-		// 	.replace(/<%=([\s\S]+?)%>/g, "'+$1+'")
-		// 	.replace(/<%([\s\S]+?)%>/g, "';$1 __p+='");
-		// code += "';return __p";
-		code += tpl.replace(escapeReg, escapeChar)
-			.replace(settings.eval, function(m,eval){
-				//还要考虑没有匹配项的情况 如：(__t='fff')就相当于'fff'
-				return "'+ ((__t=("+eval+"))==null?'':__t) +'"
-			})
-			.replace(settings.inter, function(m,inter){
-				return "';\n "+ inter +"\n __p+='"
-			});
+		//字符串替换
+		tpl.replace(matcher,function(match,eval,inter,offset){
+			code+=tpl.slice(index, offset).replace(escapeReg, escapeChar);//不是模板字符的字符串走常规匹配
+			index = offset+match.length;//tpl截取后,index改为这次模板字符匹配结束后的索引值
+
+			if(eval){//如果匹配到插值
+				code += "'+ ((__t=("+eval+"))==null?'':__t) +'";
+			}else if(inter){//如果匹配到js语句
+				code += "';\n "+ inter +"\n __p+='";
+			}
+
+			return code;
+		})
+		//字符结尾处
 		code += "';\n return __p";
-		//上面的正则匹配要优化  
-
-
 
 		//声明函数,这个函数体里的内容会根据模板动态修改
-		var fn = new Function("data",code);//这样声明的函数的最后一个参数是个字符串，它包含整个函数体的代码
+		var fn = new Function("data", code);//这样声明的函数的最后一个参数是个字符串，它包含整个函数体的代码
+
 		//声明渲染函数，为了链式调用，所以使用this
 		var render = function (data) {
 			return fn.apply(this, [data]);
