@@ -1,7 +1,13 @@
 /**
  * GitHub地址：
  * 
- * 参考资料: https://github.com/jquery-validation/jquery-validation/blob/master/src/core.js , https://github.com/chriso/validator.js , js高级程序设计14章--表单脚本 , 
+ * 参考资料: https://github.com/jquery-validation/jquery-validation/blob/master/src/core.js ,
+ *          https://github.com/chriso/validator.js ,
+ *          js高级程序设计14章--表单脚本 ,
+ *          https://wangchujiang.com/validator.js/ ,
+ *          https://github.com/WLDragon/SMValidator ,
+ *          
+ * 
  * 
  * 思路：
  * 
@@ -11,8 +17,11 @@
  * 
  * 调用方式：(dom, [{ strategy:'name[: other arg]', errMsg:'' }]),错误提示出现顺序依据调用顺序为准
  * 
- * 实现功能: 可设置提示出现位置,
- *  
+ * 实现功能: 1. 不需要form表单,走ajax提交,每个input元素增加独立的校验;
+ *          2. 可设置错误提示出现位置;(需要硬性规定dom结构?);
+ *          3. 最终返回一个Boolean值,确定是否校验通过(类似elementui的校验函数);
+ *          4. 可自行扩展校验规则;
+ *          5. 
  **/
 ;(function(window, document){
     //预先定义好(各种校验规则)策略，替换N个if判断
