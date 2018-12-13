@@ -20,8 +20,8 @@
  * 实现功能: 1. 不需要form表单,走ajax提交,每个input元素增加独立的校验;
  *          2. 可设置错误提示的样式;(需要硬性规定dom结构?);
  *          3. 最终返回一个Boolean值,确定是否校验通过(类似elementui的校验函数),参数是一个回调函数;
- *          4. 可自行扩展校验规则;
- *          5. checkbox/radio校验;
+ *          4. 可自行扩展校验规则;---ok
+ *          5. checkbox/radio校验;---ok
  *          6. 设置校验的时间（blur,change,提交时统一校验）
  *          7. 
  **/
@@ -30,7 +30,6 @@
     var strategies = {
         // 是否为空
         isNoEmpty: function( val, errMsg){
-            console.log(val)
             if( val === '' || val.length==0){
                 return errMsg;
             }
@@ -80,7 +79,7 @@
     //自定义事件绑定函数
     var on = function(tar, type, fn){
         if(addEventListener){
-            tar.addeventListern(type,fn);
+            tar.addEventListener(type,fn);
         }else{
             tar.attachEvent("on"+type, fn);
         }
@@ -181,6 +180,7 @@
                         ary.unshift(dom.value);
                     }else{
                         ary.unshift(dom.value); //数组首部存入value
+                        //绑定事件
                     }
                     ary.push(errMsg); // 数组尾部存入errMsg
                     msg = strategies[strategy].apply(dom, ary); // 绑定this,返回函数

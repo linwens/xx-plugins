@@ -38,7 +38,11 @@
         var validateFunc = function(){
             var validator = new xxValid();
             //增加自定义的校验方法
-            validator.moreStrat("fsdasaf");
+            validator.moreStrat({
+                "isTest":function(){
+                    console.log('isTest');
+                }
+            });
             //增加校验规则(不能自动化)
             validator.add(regForm.userName, [{
                 "strategy":"isNoEmpty",
