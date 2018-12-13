@@ -55,6 +55,28 @@
         },
     };
     //一些工具函数
+    //判断对象是否包含某个属性
+    var hasOwn = Object.prototype.hasOwnProperty;
+    //合并对象的方法（遍历赋值）
+    var assignObj = function(tar, rs){
+        //如果支持Object.assign就用原生方法
+        if(Object.assign){
+            return Object.assign({},tar,rs);
+        }else{//---------------------/可以写个方法替代ES6的Object.assign
+            for(var k in rs){
+                //if(!hasOwn.call(tar,k)){//可以增加但是不能覆盖原有的
+                    tar[k] = rs[k] 
+                //}
+            }
+            return tar;
+        }
+    }
+    //判断数据类型
+    var checkType = function(data){
+        //我想直接返回类型的字符串
+        const str = Object.prototype.toString.call(data)
+        return /^\[object (.*)\]$/.exec(str)[1]
+    };
     //自定义事件绑定函数
     var on = function(tar, type, fn){
         if(addEventListener){
@@ -92,6 +114,26 @@
         this.cache = []; //保存校验规则
     };
     var _proto = Validator.prototype;
+    //增加自定义校验函数，扩展strategies
+    _proto.moreStrat = function(newOpt){
+        if(checkType(newOpt)==="Array"){
+            for(var i=0,item;item=newOpt[i++];i<newOpt.length){
+                if(!checkType(item)==="Object"){
+                    continue;
+                }else{
+                    strategies = assignObj(strategies, item)
+                }
+            }
+            //strategies.concat(newOpt);
+        }
+        if(checkType(newOpt)==="Object"){//如果是个对象就遍历赋值
+            strategies = assignObj(strategies, newOpt)
+        }
+        if(checkType(newOpt)!=="Object"){
+            console.error('新增校验规则未生效，参数不对')
+        }
+        console.log(strategies);
+    },
     //生成消息提示dom
     _proto.insertHtml = function(tar, m){
         //判断是否radio
