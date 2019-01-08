@@ -1,3 +1,8 @@
+//记录不知道的原生方法
+/**
+ * querySelectorAll() 方法返回文档中匹配指定 CSS 选择器的所有元素，返回 NodeList 对象
+ * 
+ */
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
         typeof define === 'function' && define.amd ? define(factory) :
@@ -7,9 +12,9 @@
 
     var document = window.document;
 
-    var isIE8 = !document.addEventListener;
+    var isIE8 = !document.addEventListener; //根据监听方法判断是否IE8 ***
 
-    function on(context, eventType, callback) {
+    function on(context, eventType, callback) { //重写事件绑定函数
         if(isIE8) {
             context.attachEvent('on' + eventType, callback);
         }else {
@@ -102,7 +107,7 @@
         //初始化局部属性，如果没填，则使用全局属性
         for(var i = GLOBAL_ATTRIBUTES.length - 1; i >= 0; i--) {
             var attr = GLOBAL_ATTRIBUTES[i];
-            self[attr] = hasOwn(options, attr) ? options[attr] : config[attr];
+            self[attr] = hasOwn(options, attr) ? options[attr] : config[attr]; // config指...
         }
         
         self.fields = {};
@@ -171,7 +176,7 @@
         var self = this;
         var name = input.getAttribute('name');
         var dataRule = input.getAttribute('data-rule');
-        var item = dataRule ? this.parseString(dataRule) : this.fields[name];
+        var item = dataRule ? this.parseString(dataRule) : this.fields[name]; // this.fields 
         if(item) {
             input._sm = {rule: item, flag: 0};
 
