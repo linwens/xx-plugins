@@ -79,10 +79,15 @@
     //自定义事件绑定函数
     var on = function(tar, type, fn){
         if(addEventListener){
-            tar.addEventListener(type,fn);
+            on = function(tar, type, fn){ //把on重新赋值，那第一次以后再调用on方法就不用再走进if判断了。
+                tar.addEventListener(type,fn);
+            }
         }else{
-            tar.attachEvent("on"+type, fn);
+            on = function(tar, type, fn){
+                tar.attachEvent("on"+type, fn);
+            }
         }
+        on(tar, type, fn)
     };
     //判断是否是checkbox
     var isChcekbox = function(input){
@@ -156,6 +161,21 @@
         }
         
     };
+    //给input绑定事件
+    _proto.bindEvent = function(dom, type){ //元素， 绑定的事件类型
+        if(isChcekbox(dom)||isChcekbox(dom)){ // checkbox，radio
+            var name = dom[0]?dom[0].name:dom.name; //取到数据name
+            var hideInput = document.createElement('input');
+            hideInput.attributes.name = name;
+            hideInput.attributes.type = "hidden";
+            console.log(hideInput);
+            dom.parentNode.insertBefore(hideInput, dom.nextElementSibling)
+        }else{ // text表单
+            on(dom, "input", function(){
+                
+            })
+        }
+    };
     //保存校验规则的函数
     _proto.add = function(dom, rules){
         var _self = this;
@@ -175,7 +195,7 @@
                             }
                         }
                         ary.unshift(val)
-                    }else if(isRadio(dom)){
+                    }else if(isChcekbox(dom)){
                         dom.name = dom[0].name;
                         ary.unshift(dom.value);
                     }else{
