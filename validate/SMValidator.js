@@ -107,7 +107,7 @@
         //初始化局部属性，如果没填，则使用全局属性
         for(var i = GLOBAL_ATTRIBUTES.length - 1; i >= 0; i--) {
             var attr = GLOBAL_ATTRIBUTES[i];
-            self[attr] = hasOwn(options, attr) ? options[attr] : config[attr];
+            self[attr] = hasOwn(options, attr) ? options[attr] : config[attr]; // config指...
         }
         
         self.fields = {};
