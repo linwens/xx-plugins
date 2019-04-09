@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>loading插件</title>
+	<script src="xx-loading.js"></script>
+	<style>
+		#J_loading{
+			width: 200px;
+			height: 200px;
+			margin: 0 auto;
+			background: #CFCFCF;
+		}
+		#J_progress{
+			height: 20px;
+			background: #1FD9D0;
+			border-radius: 20px;
+		}
+	</style>
+	<script src="https://www.shy-u.xyz/plugins/jquery.js"></script>
+</head>
+<body>
+	<div>
+		<div id="J_loading">
+			<div id="J_progress" style="width: 0;"></div>
+			<span id="J_val"></span>
+		</div>
+	</div>
+	<script>
+		var loading = xLD('J_loading'),
+			prgDom = loading.prgDom('J_progress'),//显示进度条动画
+			valDom = loading.valDom('J_val');//显示进度条数字
+
+		console.log(loading);
+		loading.add(80, 200, function(){
+			console.log('80%');
+			loading.complete(100, function(){
+				console.log('100%');
+			})
+		});
+		
+	</script>
+</body>
+</html>
