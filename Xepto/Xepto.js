@@ -17,14 +17,20 @@
          * 初始化变量
          * 1、$
          * 2、xepto
-         * 3、fragmentRE正则：用来匹配标签字符串
+         * 3、fragmentRE正则：匹配是否为html节点
          * 4、simpleSelectorRE正则：校验字符串名称是否含 - 
          * 5、readyRE正则：判断文档加载状态
          * 6、emptyArray缓存一个空数组
          * 7、isArray判断是否是数组
          * 8、class2type存储类型值
          * 9、filter数组的过滤器方法
+         * 9、slice数组的截取方法
+         * 9、concat数组的合并方法
          * 10、tempParent是一个div元素
+         * 11、singleTagRE正则：匹配是否是一对完整的标签，如：<div></div>
+         * 12、tagExpanderRE正则：对 html 进行修复，如<p class="test" /> 修复成 <p class="test" /></p>
+         * 13、containers,用于生成元素包裹传入的特殊标签
+         * 14、methodAttributes，保存一些元素标签属性，用来遍历赋值
          */
         //-----------------------------------------------------------
         var $, xepto = {};
@@ -38,7 +44,19 @@
         var class2type = {},
         toString = class2type.toString;
         var filter = emptyArray.filter;
+        var slice = emptyArray.slice; //slice的参数都是选填，默认从0开始到结束
+        var concat = emptyArray.concat;
         var tempParent = document.createElement('div');
+        var singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/; // 1指向前面(\w+)匹配到的字符串
+        var tagExpanderRE = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/ig;
+        var table = document.createElement('table'), tableRow = document.createElement('tr');
+        var containers = {
+            'tr': document.createElement('tbody'),
+            'tbody': table, 'thead': table, 'tfoot': table,
+            'td': tableRow, 'th': tableRow,
+            '*': document.createElement('div'),
+        };
+        var methodAttributes = ['val', 'css', 'html', 'text', 'data', 'width', 'height', 'offset'];
         /**
          * 初始化一些方法函数
          * 1、Z构造函数Z(dom, selector)
@@ -48,7 +66,10 @@
          * 5、isObject是否为对象
          * 6、isPlainObject是否是纯对象
          * 7、isWindow是否是window对象
-         * 8、是否是类数组
+         * 8、likeArray是否是类数组
+         * 9、camelize:将一组字符串变成“骆驼”命名法的新字符串
+         * 10、extend方法用来数据拷贝
+         * 11、flatten方法用来给数组降维
          */
         //------------------------------------------------------------
         function Z(dom, selector) {
@@ -85,20 +106,44 @@
                 type = $.type(obj);
             return 'function' != type && !isWindow(obj) && ('array' == type || length === 0 ||(typeof length == 'number' && length > 0 && (length - 1) in obj))
         }
+        function camelize(str){
+            return str.replace(/-+(.)?/g, function(match, chr){
+                return chr ? chr.toUpperCase() : ''
+            })
+        }
+        function extend(target, source, deep) {
+            for ( key in source) {
+                if (deep && (isPlainObject(source[key]) || isArray(source[key])) ) {
+                    if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
+                        target[key] = {}
+                    }
+                    if (isArray(source[key]) && !isArray(target[key])) {
+                        target[key] = []
+                    }
+                    extend(target[key], source[key], deep)
+                } else if (source[key] !== undefined) {
+                    target[key] = source[key]
+                }
+            }
+        }
+        //apply方法的第二个参数是个数组类型，从而达到数组降维的效果
+        function flatten(array) {
+            return array.length>0 ? $.fn.concat.apply([], array) : array
+        }
         /**
          * 声明xepto里的方法
          * 1、xepto.Z方法返回一个实例
          * 2、[核心] init方法处理传参，最后调用xepto.Z生成$对象
-         * 3、xepto.fragment方法返回dom元素
+         * 3、xepto.fragment方法：将html片断转换成dom数组形式
          * 4、xepto.qsa方法通过css的id/类名/tag生成元素
-         * 5、xepto.matches方法
+         * 5、xepto.matches方法用于判断某个元素是否与一个给定的选择器匹配
          */
         //-------------------------------------------------------------
         xepto.Z = function(dom, selector) {
             return new Z(dom, selector)
         }
-        xepto.fragment = function(html, name, properties) {
-            var dom, nodes, container
+        xepto.fragment = function(html, name, properties) { // 标签字符串，标签名，要给标签设置的属性
+            var dom, nodes, container // container指外层包裹元素
 
             if (singleTagRE.test(html)) {
                 dom = $(document.createElement(RegExp.$1))
@@ -110,7 +155,7 @@
                 if (name === undefined) {
                     name = fragmentRE.test(html) && RegExp.$1
                 }
-                if (!(name in container)) {
+                if (!(name in containers)) {
                     name = '*'
                 }
                 container = containers[name];
@@ -144,7 +189,7 @@
         xepto.isZ = function(object) {
             return object instanceof xepto.Z;
         }
-        xepto.matches = function(){
+        xepto.matches = function(element, selector){
             if (!selector || !element || element.nodeType !== 1) {
                 return false
             }
@@ -156,6 +201,7 @@
             if ( temp ) {
                 (parent = tempParent).appendChild(element)
             }
+            // ~是按位非操作符：返回操作数的负值 再 -1 (性能更快)
             match = ~xepto.qsa(parent, selector).indexOf(element)
             temp && tempParent.removeChild(element)
             return match
@@ -171,7 +217,7 @@
             } else if (typeof selector == 'string') {
                 selector = selector.trim()
                 if (selector[0] == '<' && fragmentRE.test(selector)) {
-                    dom = xepto.fragment(selector, RegExp.$1, context);//+?RegExp.$1：指的是与正则表达式匹配的第一个 子匹配(以括号为标志)字符串
+                    dom = xepto.fragment(selector, RegExp.$1, context);// RegExp.$1：指的是与正则表达式匹配的第一个 子匹配(以括号为标志)字符串
                     selector = null;
                 } else if (context !== undefined) {
                     return $(context).find(selector)
@@ -208,6 +254,13 @@
          * 给$对象上增加方法
          * 1、each方法遍历可枚举的引用类型,回调函数里传参得是（索引，项）
          * 2、type方法
+         * 3、contains方法
+         * 4、camelCase方法
+         * 5、extend方法扩展目标对象的属性
+         * 6、grep方法就是filter的功能
+         * 7、inArray方法返回数组中指定元素的索引值
+         * 8、isNumeric方法判断是否是数字还是字符串数字
+         * 9、map方法遍历集合中的元素返回一个新数组
          */
         //-----------------------------------------------------------
         $.type = type;
@@ -240,12 +293,57 @@
             }
             return false
         }
+        $.camelCase = camelize;
+        $.extend = function(target) {
+            var deep, args = slice.call(arguments, 1)
+            if (typeof target == 'boolean') { //第一个值为布尔值，那就依据它控制是深拷贝还是浅拷贝
+                deep = target;
+                target = args.shift()
+            }
+            args.forEach(function(arg){
+                extend(target, arg, deep)
+            })
+            return target;
+        }
+        $.grep = function(elements, callback) {
+            return filter.call(elements,callback)
+        }
+        $.inArray = function(elem, array, i) {
+            return emptyArray.indexOf.call(array, elem, i) //原生indexOf有一个fromindex参数可选
+        }
+        $.isNumeric = function(val) {
+            var num = Number(val),
+                type = typeof val;
+            return val != null && type != 'boolean' && (type != 'string' || val.length) && !isNaN(num) && isFinite(num) || false
+        }
+        $.map = function(elements, callback) {
+            var value, values = [], i, key;
+            if (likeArray(elements)){
+                for(i = 0; i<elements.length;i++){
+                    value = callback(elements[i], i)
+                    if (value != null) {
+                        values.push(value)
+                    }
+                }
+            } else {
+                for( key in elements) {
+                    value = callback(elements[key], key)
+                    if (value != null) {
+                        values.push(value)
+                    }
+                }
+            }
+            return flatten(values)
+        }
         /**
          * 给$对象上增加fn对象，存储公共方法
          * 1、ready方法：判断document是否加载完成
          * 2、find方法：
          * 3、filter方法：没懂逻辑
          * 4、not方法：
+         * 5、toArray方法：把数据转化为纯数组
+         * 5、concat方法：就是实现数组的合并，在内部判断如果项是xepto的集合(类数组)就转为纯数组
+         * 6、slice方法：
          */
         //------------------------------------------------------------
         $.fn = {
@@ -303,6 +401,23 @@
                         })
                     })
                 }
+            },
+            slice: function() {
+                return $(slice.apply(this, arguments))
+            },
+            get: function(idx) { //不传索引值，按普通数组的方式返回所有的元素
+                return idx === undefined ? slice.call(this) : this[idx >= 0 ? idx : idx + this.length]
+            },
+            toArray: function(){
+                return this.get();
+            },
+            concat: function(){
+                var i, value, args = [];
+                for (i=0;i<arguments.length;i++) {
+                    value = arguments[i]
+                    args[i] = xepto.isZ(value) ? value.toArray() : value
+                }
+                return concat.apply(xepto.isZ(this) ? this.toArray() : this, args)
             }
         }
         xepto.Z.prototype = Z.prototype = $.fn;
