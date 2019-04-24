@@ -31,6 +31,7 @@
          * 12、tagExpanderRE正则：对 html 进行修复，如<p class="test" /> 修复成 <p class="test" /></p>
          * 13、containers,用于生成元素包裹传入的特殊标签
          * 14、methodAttributes，保存一些元素标签属性，用来遍历赋值
+         * 15、classCache
          */
         //-----------------------------------------------------------
         var $, xepto = {};
@@ -57,6 +58,7 @@
             '*': document.createElement('div'),
         };
         var methodAttributes = ['val', 'css', 'html', 'text', 'data', 'width', 'height', 'offset'];
+        var classCache = {};
         /**
          * 初始化一些方法函数
          * 1、Z构造函数Z(dom, selector)
@@ -70,6 +72,9 @@
          * 9、camelize:将一组字符串变成“骆驼”命名法的新字符串
          * 10、extend方法用来数据拷贝
          * 11、flatten方法用来给数组降维
+         * 12、uniq方法数组去除重复项
+         * 13、className方法：
+         * 14、funcArg方法：当参数为函数时的处理
          */
         //------------------------------------------------------------
         function Z(dom, selector) {
@@ -129,6 +134,25 @@
         //apply方法的第二个参数是个数组类型，从而达到数组降维的效果
         function flatten(array) {
             return array.length>0 ? $.fn.concat.apply([], array) : array
+        }
+        function uniq(array) {
+            return filter.call(array, function(item, idx){
+                return array.indexOf(item) == idx
+            })
+        }
+        function className(node, value) {
+            var klass = node.className || '',
+                svg = klass && klass.baseVal !== undefined; //判断是否是svg元素baseVal是svg元素的属性
+            if (value === undefined) { // 要设置的calss值可以是空
+                return svg ? klass.baseVal : klass
+            }
+            svg ? (klass.baseVal = value) : (node.className = value)
+        }
+        function funcArg(context, arg, idx, payload) { // payload指原始值，就是arg函数执行的时候，上下文context对应的一个原始值
+            return isFunction(arg) ? arg.call(context, idx, payload) : arg
+        }
+        function classRE(name) {
+            return name in classCache ? classCache[name] : (classCache[name] = new RegExp('(^|\\s)' + name + '(\\s|$)'))
         }
         /**
          * 声明xepto里的方法
@@ -261,6 +285,9 @@
          * 7、inArray方法返回数组中指定元素的索引值
          * 8、isNumeric方法判断是否是数字还是字符串数字
          * 9、map方法遍历集合中的元素返回一个新数组
+         * 10、noop方法引用一个空函数，不做别的处理
+         * 11、parseJSON方法就是JSON.parse
+         * 12、trim方法去掉字符串首尾空格
          */
         //-----------------------------------------------------------
         $.type = type;
@@ -335,6 +362,13 @@
             }
             return flatten(values)
         }
+        $.noop = function() {}
+        if (window.JSON) {
+            $.parseJSON  = JSON.parse
+        }
+        $.trim = function(str) {
+            return str == null ? "" : String.prototype.trim.call(str);
+        }
         /**
          * 给$对象上增加fn对象，存储公共方法
          * 1、ready方法：判断document是否加载完成
@@ -344,6 +378,10 @@
          * 5、toArray方法：把数据转化为纯数组
          * 5、concat方法：就是实现数组的合并，在内部判断如果项是xepto的集合(类数组)就转为纯数组
          * 6、slice方法：
+         * 7、add方法：添加元素到当前匹配的元素集合中。如果给定content参数，将只在content元素中进行查找，否则在整个document中查找。
+         * 7、each方法：使得遍历里的回调函数返回false的时候能跳出遍历
+         * 7、hasClass方法：判断是否包含类名
+         * 8、addClass方法：为每个匹配的元素添加指定的class类名。多个class类名使用空格分隔。
          */
         //------------------------------------------------------------
         $.fn = {
@@ -418,6 +456,40 @@
                     args[i] = xepto.isZ(value) ? value.toArray() : value
                 }
                 return concat.apply(xepto.isZ(this) ? this.toArray() : this, args)
+            },
+            add: function(selector, context) {
+                return $(uniq(this.concat($(selector, context))))
+            },
+            each: function(callback) {
+                // every() 方法测试数组的"所有"元素是否都通过了指定函数的测试,有一个没通过就返回false,并跳出遍历
+                emptyArray.every.call(this, function(el, idx) {
+                    return callback.call(el, idx, el) !== false
+                })
+                return this
+            },
+            hasClass: function(name) {
+                if (!name) return false
+                //some() 方法测试数组中的某些元素是否通过了指定函数的测试,找到第一个返回true的元素后就跳出循环 (与every正相反)
+                return emptyArray.some.call(this, function(el) {
+                    return this.test(className(el)) //this指向classRE(name),即一个正则
+                }, classRE(name))
+            },
+            addClass: function(name) {
+                if (!name) {
+                    return this;
+                }
+                return this.each(function(idx) {
+                    if (!('className' in this)) return
+                    classList = [];
+                    var cls = className(this), //获取当前存在的class类名
+                        newName = funcArg(this, name, idx, cls);
+                    newName.split(/\s+/g).forEach(function(klass) {
+                        if (!$(this).hasClass(klass)) {
+                            classList.push(klass)
+                        }
+                    }, this)
+                    classList.length && className(this, cls + (cls ? " " : "") + classList.join(" "))
+                })
             }
         }
         xepto.Z.prototype = Z.prototype = $.fn;
