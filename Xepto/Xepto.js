@@ -31,7 +31,8 @@
          * 12、tagExpanderRE正则：对 html 进行修复，如<p class="test" /> 修复成 <p class="test" /></p>
          * 13、containers,用于生成元素包裹传入的特殊标签
          * 14、methodAttributes，保存一些元素标签属性，用来遍历赋值
-         * 15、classCache
+         * 15、classCache:缓存类名正则
+         * 16、adjacencyOperators: 存储dom操作的方法
          */
         //-----------------------------------------------------------
         var $, xepto = {};
@@ -59,6 +60,7 @@
         };
         var methodAttributes = ['val', 'css', 'html', 'text', 'data', 'width', 'height', 'offset'];
         var classCache = {};
+        var adjacencyOperators = [ 'after', 'prepend', 'before', 'append'];
         /**
          * 初始化一些方法函数
          * 1、Z构造函数Z(dom, selector)
@@ -75,6 +77,7 @@
          * 12、uniq方法数组去除重复项
          * 13、className方法：
          * 14、funcArg方法：当参数为函数时的处理
+         * 15、traverseNode方法：
          */
         //------------------------------------------------------------
         function Z(dom, selector) {
@@ -154,6 +157,12 @@
         function classRE(name) {
             return name in classCache ? classCache[name] : (classCache[name] = new RegExp('(^|\\s)' + name + '(\\s|$)'))
         }
+        function traverseNode(node, fun) {
+            fun(node)
+            for (var i = 0, len = node.childNodes.length; i < len; i++) {
+                traverseNode(node.childNodes[i], fun)
+            }
+        }
         /**
          * 声明xepto里的方法
          * 1、xepto.Z方法返回一个实例
@@ -184,7 +193,7 @@
                 }
                 container = containers[name];
                 container.innerHTML = '' + html;
-                dom = $.each(slice.call(container,childNodes), function(){
+                dom = $.each(slice.call(container.childNodes), function(){
                     container.removeChild(this)
                 })
             }
@@ -382,6 +391,11 @@
          * 7、each方法：使得遍历里的回调函数返回false的时候能跳出遍历
          * 7、hasClass方法：判断是否包含类名
          * 8、addClass方法：为每个匹配的元素添加指定的class类名。多个class类名使用空格分隔。
+         * 9、after方法：
+         * 9、prepend方法：
+         * 9、before方法：
+         * 9、append方法：
+         * 10、
          */
         //------------------------------------------------------------
         $.fn = {
@@ -492,6 +506,63 @@
                 })
             }
         }
+        //已下遍历生成插入dom的方法
+        adjacencyOperators.forEach(function(operator, operatorIndex) {
+            var inside = operatorIndex % 2; //能整除(偶数)返回0，不能整除(奇数)返回1
+            $.fn[operator] = function() {
+                var argType;
+                var parent;
+                var copyByClone = this.length > 1 ;
+                var nodes = $.map(arguments, function(arg) {
+                    var arr = [];
+                    argType = type(arg);
+                    if (argType == "array") {
+                        arg.forEach(function(el) {
+                            if (el.nodeType !== undefined) {
+                                return arr.push(el)
+                            } else if ($.xepto.isZ(el)) {
+                                return arr = arr.concat(el.get())
+                            }
+                            arr = arr.concat(xepto.fragment(el))
+                        })
+                        return arr;
+                    }
+                    return (argType == "object" || arg == null) ? arg : xepto.fragment(arg)
+                });
+                if (nodes.length < 1) {
+                    return this
+                }
+
+                return this.each(function(_, target) {
+                    parent = inside ? target : target.parentNode;
+                    target = operatorIndex == 0 ? target.nextSibling : (operatorIndex == 1 ? target.firstChild : (operatorIndex == 2 ? target : null));
+
+                    var parentInDocument = $.contains(document.documentElement, parent);
+                    // nodes是一个dom的数组
+                    nodes.forEach(function(node) {
+                        if (copyByClone) {
+                            node = node.cloneNode(true); //cloneNode是原生方法
+                        } else if (!parent) {
+                            return $(node).remove()
+                        }
+                        parent.insertBefore(node, target); //insertBefore是原生方法
+                        if (parentInDocument) {
+                            traverseNode(node, function(el) {
+                                if (el.nodeName != null && el.nodeName.toUpperCase() === 'SCRIPT' && (!el.type || el.type === 'text/javascript') && !el.src) {
+                                    var target = el.ownerDocument ? el.ownerDocument.defaultView : window;
+                                    target['eval'].call(target, el.innerHTML)
+                                }
+                            })
+                        }
+                    })
+                })
+            }
+
+            $.fn[inside ? operator+'To' : 'insert'+(operatorIndex ? 'Before' : 'After')] = function(html) {
+                $(html)[operator](this)
+                return this;
+            }
+        })
         xepto.Z.prototype = Z.prototype = $.fn;
         $.xepto = xepto
         return $;
