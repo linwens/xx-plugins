@@ -78,6 +78,9 @@
          * 13、className方法：
          * 14、funcArg方法：当参数为函数时的处理
          * 15、traverseNode方法：
+         * 16、setAttribute方法设置dom节点属性
+         * 17、children方法返回dom数组
+         * 18、filtered方法返回xepto的dom对象
          */
         //------------------------------------------------------------
         function Z(dom, selector) {
@@ -162,6 +165,22 @@
             for (var i = 0, len = node.childNodes.length; i < len; i++) {
                 traverseNode(node.childNodes[i], fun)
             }
+        }
+        function setAttribute(node, name, value) {
+            value == null ? node.removeAttribute(name) : node.setAttribute(name, value)
+        }
+        function children(element) {
+            return 'children' in element ? slice.call(element.children) : $.map(element.childNodes, function(node){
+                if (node.nodeType == 1) {
+                    return node
+                }
+            })
+        }
+        function filtered(nodes, selector) {
+            return selector == null ? $(nodes) : $(nodes).filter(selector)
+        }
+        function isDocument(obj) {
+            return obj != null && obj.nodeType == obj.DOCUMENT_NODE
         }
         /**
          * 声明xepto里的方法
@@ -395,7 +414,12 @@
          * 9、prepend方法：
          * 9、before方法：
          * 9、append方法：
-         * 10、
+         * 10、attr方法：读取或设置dom的属性
+         * 11、children方法：获得每个匹配元素集合元素的直接子元素，如果给定selector，那么返回的结果中只包含符合css选择器的元素(不包括文字及注释节点)
+         * 12、map方法返回一个xepto集合
+         * 12、clone方法复制集合中的所有元素
+         * 13、closet方法：从元素本身开始，逐级向上级元素匹配，并返回最先匹配selector的元素。如果给定context节点参数，那么只匹配该节点的后代元素
+         * 14、contents方法：获得每个匹配元素集合元素的子元素，包括文字和注释节点
          */
         //------------------------------------------------------------
         $.fn = {
@@ -503,6 +527,55 @@
                         }
                     }, this)
                     classList.length && className(this, cls + (cls ? " " : "") + classList.join(" "))
+                })
+            },
+            attr: function(name, value) { //++ 这里的判断存在缺陷，如 null = '属性值'
+                var result;
+                return (typeof name == 'string' && !(1 in arguments)) ? (0 in this && this[0].nodeType == 1 && (result = this[0].getAttribute(name)) != null ? result : undefined) : this.each(function(idx) {
+                    if (this.nodeType != 1) return
+                    if (isObject(name)) {
+                        for (key in name) {
+                            setAttribute(this, key, nam[key])
+                        }
+                    } else {
+                        setAttribute(this, name, funcArg(this, value, idx, this.getAttribute(name)))
+                    }
+                })
+            },
+            children: function(selector) {
+                return filtered(this.map(function() {
+                    return children(this)
+                }), selector)
+            },
+            map: function(fn) {
+                return $($.map(this, function(el, i) {
+                    return fn.call(el, i, el)
+                }))
+            },
+            clone: function() {
+                return this.map(function() {
+                    //cloneNode是原生方法：参数是 true，它还将递归复制当前节点的所有子孙节点。否则，它只复制当前节点。
+                    return this.cloneNode(true)
+                })
+            },
+            closest: function(selector, context) {
+                var nodes = [],
+                    collection = typeof selector == 'object' && $(selector);
+                // 这里的下划线传参只是一种写法习惯(表示参数是要传的，但形参叫啥名字我也懒得起了),无特殊含义，看源码，我们会发现这里的 _ 指的是集合中的项
+                this.each(function(_, node) {
+                    while (node && !(collection ? collection.indexOf(node) >=0 : xepto.matches(node, selector))) {
+                        node = node !== context && !isDocument(node) && node.parentNode
+                    }
+                    if (node && nodes.indexOf(node) < 0) {
+                        nodes.push(node)
+                    }
+                })
+                return $(nodes)
+            },
+            contents: function() {
+                // contentDocument是原生属性：以 HTML 对象返回框架容纳的文档
+                return this.map(function() {
+                    return this.contentDocument || slice.call(this.childNodes)
                 })
             }
         }

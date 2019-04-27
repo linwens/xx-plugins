@@ -21,10 +21,9 @@
     <script>
         $(function($){
             
-            var bb = $.map([1,2,3,4,5],function(item,index){
-                        console.log(item>1)
-                        if(item>1){return item*item;}
-                    })
+            var aa = $('form').contents();
+            var bb = $('form').children();
+            console.log(aa)
             console.log(bb)
         })
     </script>
