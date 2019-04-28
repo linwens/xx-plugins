@@ -33,6 +33,7 @@
          * 14、methodAttributes，保存一些元素标签属性，用来遍历赋值
          * 15、classCache:缓存类名正则
          * 16、adjacencyOperators: 存储dom操作的方法
+         * 17、cssNumber：
          */
         //-----------------------------------------------------------
         var $, xepto = {};
@@ -61,6 +62,7 @@
         var methodAttributes = ['val', 'css', 'html', 'text', 'data', 'width', 'height', 'offset'];
         var classCache = {};
         var adjacencyOperators = [ 'after', 'prepend', 'before', 'append'];
+        var cssNumber = { 'column-count': 1, 'columns': 1, 'font-weight': 1, 'line-height': 1,'opacity': 1, 'z-index': 1, 'zoom': 1 };
         /**
          * 初始化一些方法函数
          * 1、Z构造函数Z(dom, selector)
@@ -81,6 +83,8 @@
          * 16、setAttribute方法设置dom节点属性
          * 17、children方法返回dom数组
          * 18、filtered方法返回xepto的dom对象
+         * 19、dasherize方法
+         * 20、maybeAddPx方法
          */
         //------------------------------------------------------------
         function Z(dom, selector) {
@@ -181,6 +185,16 @@
         }
         function isDocument(obj) {
             return obj != null && obj.nodeType == obj.DOCUMENT_NODE
+        }
+        function dasherize(str) {
+            return str.replace(/::/g, '/')
+                   .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+                   .replace(/([a-z\d])([A-Z])/g, '$1_$2')
+                   .replace(/_/g, '-')
+                   .toLowerCase()
+        }
+        function maybeAddPx(name, value) {
+            return (typeof value == "number" && !cssNumber[dasherize(name)]) ? value + "px" : value
         }
         /**
          * 声明xepto里的方法
@@ -420,6 +434,7 @@
          * 12、clone方法复制集合中的所有元素
          * 13、closet方法：从元素本身开始，逐级向上级元素匹配，并返回最先匹配selector的元素。如果给定context节点参数，那么只匹配该节点的后代元素
          * 14、contents方法：获得每个匹配元素集合元素的子元素，包括文字和注释节点
+         * 15、css方法：设置元素的样式
          */
         //------------------------------------------------------------
         $.fn = {
@@ -577,6 +592,47 @@
                 return this.map(function() {
                     return this.contentDocument || slice.call(this.childNodes)
                 })
+            },
+            css: function(property, value) {
+                if (arguments.length < 2) {
+                    var element = this[0]
+                    if (typeof property == 'string') {
+                        if (!element) return
+                        return element.style[camelize(property)] || getComputedStyle(element, '').getPropertyValue(property)
+                    } else if (isArray(property)) {
+                        if (!element) return
+                        var props = {}
+                        var computedStyle = getComputedStyle(element, '')
+                        $.each(property, function(_, prop) {
+                            props[prop] = (element.style[camelize(prop)] || computedStyle.getPropertyValue(prop))
+                        })
+                        return props
+                    }
+                }
+                var css = ''
+                if (type(property) == 'string') {
+                    if (!value && value !== 0) {
+                        this.each(function() {
+                            // removeProperty是原生的方法删除元素样式
+                            this.style.removeProperty(dasherize(property))
+                        })
+                    } else {
+                        css = dasherize(property) + ":" + maybeAddPx(property, value)
+                    }
+                } else {
+                    for (key in property) {
+                        if (!property[key] && property[key] !== 0) {
+                            this.each(function() {
+                                this.style.removeProperty(dasherize(key))
+                            })
+                        } else {
+                            css += dasherize(key) + ':' + maybeAddPx(key, property[key]) + ';'
+                        }
+                    }
+                }
+                return this.each(function() {
+                    this.style.cssText += ';' + css
+                })
             }
         }
         //已下遍历生成插入dom的方法
@@ -642,6 +698,20 @@
     })()
     window.Xepto = Xepto;
     window.$ === undefined && (window.$ = Xepto)
-
+    // 判断 getComputedStyle 是否可用
+    ;(function() {
+        try {
+            getComputedStyle(undefined)
+        } catch (e) {
+            var nativeGetComputedStyle = getComputedStyle
+            window.getComputedStyle = function(element, pseudoElement) {
+                try {
+                    return nativeGetComputedStyle(element, pseudoElement)
+                } catch(e) {
+                    return null
+                }
+            }
+        }
+    })();
     return Xepto
 }))
