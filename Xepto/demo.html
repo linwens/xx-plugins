@@ -6,25 +6,25 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Xepto</title>
     <script src="./Xepto.js"></script>
-    <!-- <script src="https://zeptojs.com/zepto.min.js"></script> -->
+    <!-- <script src="https://zeptojs.com/zepto.js"></script> -->
 </head>
 <body>
     <form>
         <label for=""></label>
     </form>
     <div>
-        <p>钩子</p>
+        <p data-name="james">钩子</p>
+        <p class="aa">sss</p>
+        <p><a href="javascript:;">链接</a></p>
+        <p class="aa">ddddxxx</p>
     </div>
     <script type="text/javascript">
         $('<p>A note below the label</p>').appendTo('div')
     </script>
     <script>
         $(function($){
-            
-            var aa = $('form').css('background-color', 'red');
-            var bb = $('form').children();
-            console.log(aa)
-            console.log(bb)
+          console.log($('p').filter('.aa'))
+          console.log($('p').has('a'))
         })
     </script>
 </body>

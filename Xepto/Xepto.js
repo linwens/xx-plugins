@@ -34,6 +34,7 @@
          * 15、classCache:缓存类名正则
          * 16、adjacencyOperators: 存储dom操作的方法
          * 17、cssNumber：
+         * 18、capitalRE：校验大写
          */
         //-----------------------------------------------------------
         var $, xepto = {};
@@ -63,6 +64,7 @@
         var classCache = {};
         var adjacencyOperators = [ 'after', 'prepend', 'before', 'append'];
         var cssNumber = { 'column-count': 1, 'columns': 1, 'font-weight': 1, 'line-height': 1,'opacity': 1, 'z-index': 1, 'zoom': 1 };
+        var capitalRE = /([A-Z])/g;
         /**
          * 初始化一些方法函数
          * 1、Z构造函数Z(dom, selector)
@@ -85,6 +87,7 @@
          * 18、filtered方法返回xepto的dom对象
          * 19、dasherize方法
          * 20、maybeAddPx方法
+         * 21、deserializeValue方法：
          */
         //------------------------------------------------------------
         function Z(dom, selector) {
@@ -195,6 +198,13 @@
         }
         function maybeAddPx(name, value) {
             return (typeof value == "number" && !cssNumber[dasherize(name)]) ? value + "px" : value
+        }
+        function deserializeValue(value) {
+          try {
+            return value ? value == "true" || ( value == "false" ? false : value == "null" ? null : +value + "" == value ? +value : /^[\[\{]/.test(value) ? $.parseJSON(value) : value ) : value
+          } catch (err) {
+            return value
+          }
         }
         /**
          * 声明xepto里的方法
@@ -320,7 +330,7 @@
          * 给$对象上增加方法
          * 1、each方法遍历可枚举的引用类型,回调函数里传参得是（索引，项）
          * 2、type方法
-         * 3、contains方法
+         * 3、contains方法:检查父节点是否包含给定的dom节点，如果两者是相同的节点，则返回 false
          * 4、camelCase方法
          * 5、extend方法扩展目标对象的属性
          * 6、grep方法就是filter的功能
@@ -413,13 +423,16 @@
         }
         /**
          * 给$对象上增加fn对象，存储公共方法
+         * 0、forEach方法：遍历对象集合中每个元素，当函数返回 false 的时候，遍历不会停止，直接使用的是数组的forEach方法
+         * 0、indexOf方法就是数组的indexOf
          * 1、ready方法：判断document是否加载完成
          * 2、find方法：
-         * 3、filter方法：没懂逻辑
+         * 3、filter方法：过滤对象集合，返回对象集合中满足css选择器的项。如果参数为一个函数，函数返回有实际值得时候，元素才会被返回。在函数中， this 关键字指向当前的元素
          * 4、not方法：
          * 5、toArray方法：把数据转化为纯数组
          * 5、concat方法：就是实现数组的合并，在内部判断如果项是xepto的集合(类数组)就转为纯数组
          * 6、slice方法：
+         * 6、get方法：根据索引值返回dom节点
          * 7、add方法：添加元素到当前匹配的元素集合中。如果给定content参数，将只在content元素中进行查找，否则在整个document中查找。
          * 7、each方法：使得遍历里的回调函数返回false的时候能跳出遍历
          * 7、hasClass方法：判断是否包含类名
@@ -435,12 +448,19 @@
          * 13、closet方法：从元素本身开始，逐级向上级元素匹配，并返回最先匹配selector的元素。如果给定context节点参数，那么只匹配该节点的后代元素
          * 14、contents方法：获得每个匹配元素集合元素的子元素，包括文字和注释节点
          * 15、css方法：设置元素的样式
+         * 16、data方法：读取或写入dom的 data-* 属性
+         * 17、empty方法：清空对象集合中每个元素的DOM内容
+         * 18、eq方法：从当前对象集合中获取给定索引值对应的元素
+         * 19、first方法：获取当前对象集合中的第一个元素 (注意别搞混成第一个子元素)
+         * 20、has方法：判断当前对象集合内的元素是否含有符合选择器的子元素，或者是否包含指定的子DOM节点，如果有，则返回新的对象集合
+         * 21、size方法：返回集合的长度
          */
         //------------------------------------------------------------
         $.fn = {
             constructor: xepto.Z,
             length:0,
-            forEach: emptyArray.forEach,
+            forEach: emptyArray.forEach, //+? 这样操作的目的是什么？
+            indexOf: emptyArray.indexOf,
             ready: function (callback) {
                 if(readyRE.test(document.readyState) && document.body){
                     callback($)
@@ -460,6 +480,7 @@
                     return xepto.matches(element, selector)
                 }))
             },
+            //+?
             not: function(selector){
                 var nodes = [];
                 if (isFunction(selector) && selector.call !== undefined){
@@ -491,12 +512,19 @@
                             return $.contains(parent, node)
                         })
                     })
+                } else if (this.length == 1) {
+                  result = $(xepto.qsa(this[0], selector))
+                } else {
+                  result = this.map(function() {
+                    return xepto.qsa(this, selector)
+                  })
                 }
+                return result
             },
             slice: function() {
                 return $(slice.apply(this, arguments))
             },
-            get: function(idx) { //不传索引值，按普通数组的方式返回所有的元素
+            get: function(idx) { // 不传索引值，按普通数组的方式返回所有的元素
                 return idx === undefined ? slice.call(this) : this[idx >= 0 ? idx : idx + this.length]
             },
             toArray: function(){
@@ -633,6 +661,33 @@
                 return this.each(function() {
                     this.style.cssText += ';' + css
                 })
+            },
+            data: function(name, value) {
+              //把驼峰命名变为 小写+斜杠
+              var attrName = 'data-' + name.replace(capitalRE, '-$1').toLowerCase();
+              var data = (1 in arguments) ? this.attr(attrName, value) : this.attr(attrName)
+
+              return data !== null ? deserializeValue(data) : undefined
+            },
+            empty: function() {
+              return this.each(function() {
+                this.innerHTML = ''
+              })
+            },
+            eq: function(idx) {
+              return idx === -1 ? this.slice(idx) : this.slice(idx, + idx + 1)
+            },
+            first: function() {
+              var el = this[0];
+              return el && !isObject(el) ? el : $(el)
+            },
+            has: function(selector) {
+              return this.filter(function() {
+                return isObject(selector) ? $.contains(this, selector) : $(this).find(selector).size()
+              })
+            },
+            size: function() {
+              return this.length
             }
         }
         //已下遍历生成插入dom的方法
@@ -693,6 +748,7 @@
             }
         })
         xepto.Z.prototype = Z.prototype = $.fn;
+        xepto.deserializeValue = deserializeValue; // $.fn.data方法有用到
         $.xepto = xepto
         return $;
     })()
