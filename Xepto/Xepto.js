@@ -35,6 +35,7 @@
          * 16、adjacencyOperators: 存储dom操作的方法
          * 17、cssNumber：
          * 18、capitalRE：校验大写
+         * 19、rootNodeRE：校验body/html标签
          */
         //-----------------------------------------------------------
         var $, xepto = {};
@@ -65,6 +66,7 @@
         var adjacencyOperators = [ 'after', 'prepend', 'before', 'append'];
         var cssNumber = { 'column-count': 1, 'columns': 1, 'font-weight': 1, 'line-height': 1,'opacity': 1, 'z-index': 1, 'zoom': 1 };
         var capitalRE = /([A-Z])/g;
+        var rootNodeRE = /^(?:body|html)$/i;
         /**
          * 初始化一些方法函数
          * 1、Z构造函数Z(dom, selector)
@@ -435,7 +437,7 @@
          * 6、get方法：根据索引值返回dom节点
          * 7、add方法：添加元素到当前匹配的元素集合中。如果给定content参数，将只在content元素中进行查找，否则在整个document中查找。
          * 7、each方法：使得遍历里的回调函数返回false的时候能跳出遍历
-         * 7、hasClass方法：判断是否包含类名
+         * 7、hasClass方法：检查对象集合中是否有元素含有指定的class
          * 8、addClass方法：为每个匹配的元素添加指定的class类名。多个class类名使用空格分隔。
          * 9、after方法：
          * 9、prepend方法：
@@ -454,6 +456,9 @@
          * 19、first方法：获取当前对象集合中的第一个元素 (注意别搞混成第一个子元素)
          * 20、has方法：判断当前对象集合内的元素是否含有符合选择器的子元素，或者是否包含指定的子DOM节点，如果有，则返回新的对象集合
          * 21、size方法：返回集合的长度
+         * 22、width/height方法：获取对象集合中第一个元素的宽/高度；或者设置对象集合中所有元素的宽/高度
+         * 23、offset方法：获得当前元素相对于document的位置。返回一个对象含有： top, left, width和height；当给定一个含有left和top属性对象时，使用这些值来对集合中每一个元素进行相对于document的定位。
+         * 24、offsetParent方法：找到第一个定位过的祖先元素，意味着它的css中的position 属性值为“relative”,“absolute” or “fixed”
          */
         //------------------------------------------------------------
         $.fn = {
@@ -688,9 +693,49 @@
             },
             size: function() {
               return this.length
+            },
+            offset: function(coordinates) {
+                if ( coordinates ) {
+                    return this.each(function(index) {
+                        var $this = $(this),
+                            coords = funcArg(this, coordinates, index, $this.offset()),
+                            parentOffset = $this.offsetParent().offset(),
+                            props = {
+                                top: coords.top - parentOffset.top,
+                                left: coords.left - parentOffset.left
+                            };
+                        if ($this.css('position') == 'static') {
+                            props['position'] = 'relative'
+                        }
+                        $this.css(props)
+                    })
+                }
+                if (!this.length) return null;
+                if (document.documentElement !== this[0] && !$.contains(document.documentElement, this[0])) {
+                    return {
+                        top: 0,
+                        left: 0
+                    }
+                }
+                var obj = this[0].getBoundingClientRect()
+                return {
+                    left: obj.left + window.pageXOffset,
+                    top: obj.top + window.pageYOffset,
+                    width: Math.round(obj.width),
+                    height: Math.round(obj.height)
+                }
+            },
+            offsetParent: function() {
+                return this.map(function() {
+                    var parent = this.offsetParent || document.body;
+                    while (parent && !rootNodeRE.test(parent.nodeName) && $(parent).css("position") == "static") {
+                        parent = parent.offsetParent
+                    }
+                    return parent;
+                })
             }
         }
-        //已下遍历生成插入dom的方法
+        //以下遍历生成插入dom的方法
         adjacencyOperators.forEach(function(operator, operatorIndex) {
             var inside = operatorIndex % 2; //能整除(偶数)返回0，不能整除(奇数)返回1
             $.fn[operator] = function() {
@@ -747,6 +792,25 @@
                 return this;
             }
         })
+        //遍历生成width/height方法
+        ;['width', 'height'].forEach(function(dimension) {
+            // . 匹配除“\n”之外的任何单个字符
+            // replace() 方法的参数 replacement 可以是函数而不是字符串。在这种情况下，每个匹配都调用该函数，它返回的字符串将作为替换文本使用。该函数的第一个参数是匹配模式的字符串。
+            var dimensionProperty = dimension.replace(/./, function(m) {
+                return m[0].toUpperCase()
+            })
+            $.fn[dimension] = function(value) {
+                var offset, el = this[0];
+                if ( value === undefined) {
+                    return isWindow(el) ? el['inner' + dimensionProperty] : isDocument(el) ? el.documentElement['scroll' + dimensionProperty] : (offset = this.offset()) && offset[dimension]  //?+ (=赋值)&& 值，啥意思？
+                } else {
+                    return this.each(function(idx) {
+                        el = $(this)
+                        el.css(dimension, funcArg(this, value, idx, el[dimension]()))
+                    })
+                }
+            }
+        });
         xepto.Z.prototype = Z.prototype = $.fn;
         xepto.deserializeValue = deserializeValue; // $.fn.data方法有用到
         $.xepto = xepto
