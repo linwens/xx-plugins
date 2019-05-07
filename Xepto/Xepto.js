@@ -459,6 +459,11 @@
          * 22、width/height方法：获取对象集合中第一个元素的宽/高度；或者设置对象集合中所有元素的宽/高度
          * 23、offset方法：获得当前元素相对于document的位置。返回一个对象含有： top, left, width和height；当给定一个含有left和top属性对象时，使用这些值来对集合中每一个元素进行相对于document的定位。
          * 24、offsetParent方法：找到第一个定位过的祖先元素，意味着它的css中的position 属性值为“relative”,“absolute” or “fixed”
+         * 25、hide方法：通过设置css的属性display 为 none来将对象集合中的元素隐藏
+         * 26、html方法：获取或设置对象集合中元素的HTML内容。当没有给定content参数时，返回对象集合中第一个元素的innerHtml。当给定content参数时，用其替换对象集合中每个元素的内容。
+         * 27、index方法：获取一个元素的索引值（注：从0开始计数）。当elemen参数没有给出时，返回当前元素在兄弟节点中的位置。当element参数给出时，返回它在当前对象集合中的位置。如果没有找到该元素，则返回-1
+         * 28、parent方法：获取对象集合中每个元素的直接父元素。如果css选择器参数给出。过滤出符合条件的元素。
+         * 29、pluck方法:获取对象集合中每一个元素的属性值
          */
         //------------------------------------------------------------
         $.fn = {
@@ -694,6 +699,7 @@
             size: function() {
               return this.length
             },
+            //+?
             offset: function(coordinates) {
                 if ( coordinates ) {
                     return this.each(function(index) {
@@ -725,6 +731,7 @@
                     height: Math.round(obj.height)
                 }
             },
+            //+?
             offsetParent: function() {
                 return this.map(function() {
                     var parent = this.offsetParent || document.body;
@@ -733,7 +740,28 @@
                     }
                     return parent;
                 })
+            },
+            hide: function() {
+                return this.css("display", "none")
+            },
+            html: function(html) {
+                return (0 in arguments) ? this.each(function(idx) {
+                    var originHtml = this.innerHTML
+                    $(this).empty().append( funcArg(this, html, idx, originHtml) )
+                }) : (0 in this ? this[0].innerHTML : null)
+            },
+            index: function(element) {
+                return element ? this.indexOf($(element)[0]) : this.parent().children().indexOf(this[0])
+            },
+            parent: function(selector) {
+                return filtered(uniq(this.pluck('parentNode')), selector)
+            },
+            pluck: function(property) {
+                return $.map(this, function(el) {
+                    return el[property]
+                })
             }
+
         }
         //以下遍历生成插入dom的方法
         adjacencyOperators.forEach(function(operator, operatorIndex) {
