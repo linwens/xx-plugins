@@ -13,7 +13,7 @@
         <label for=""></label>
     </form>
     <div>
-        <p data-name="james">钩子</p>
+        <p data-name="james" class="bb">钩子</p>
         <p class="aa">sss</p>
         <p><a href="javascript:;">链接</a></p>
         <p class="aa">ddddxxx</p>
@@ -24,7 +24,7 @@
     <script>
         $(function($){
           console.log($('div').html())
-          console.log($('p').index('.aa'))
+          console.log($('p').is('.bb'))
         })
     </script>
 </body>
