@@ -163,6 +163,7 @@
             }
             svg ? (klass.baseVal = value) : (node.className = value)
         }
+        //?+
         function funcArg(context, arg, idx, payload) { // payload指原始值，就是arg函数执行的时候，上下文context对应的一个原始值
             return isFunction(arg) ? arg.call(context, idx, payload) : arg
         }
@@ -267,6 +268,7 @@
         xepto.isZ = function(object) {
             return object instanceof xepto.Z;
         }
+        //?+
         xepto.matches = function(element, selector){
             if (!selector || !element || element.nodeType !== 1) {
                 return false
@@ -445,7 +447,7 @@
          * 9、append方法：
          * 10、attr方法：读取或设置dom的属性
          * 11、children方法：获得每个匹配元素集合元素的直接子元素，如果给定selector，那么返回的结果中只包含符合css选择器的元素(不包括文字及注释节点)
-         * 12、map方法返回一个xepto集合
+         * 12、map方法:遍历对象集合中的所有元素。通过遍历函数返回值形成一个新的集合对象
          * 12、clone方法复制集合中的所有元素
          * 13、closet方法：从元素本身开始，逐级向上级元素匹配，并返回最先匹配selector的元素。如果给定context节点参数，那么只匹配该节点的后代元素
          * 14、contents方法：获得每个匹配元素集合元素的子元素，包括文字和注释节点
@@ -465,6 +467,11 @@
          * 28、parent方法：获取对象集合中每个元素的直接父元素。如果css选择器参数给出。过滤出符合条件的元素。
          * 29、pluck方法:获取对象集合中每一个元素的属性值
          * 30、is方法：判断当前元素集合中的第一个元素是否符css选择器
+         * 31、last方法：获取对象集合中最后一个元素
+         * 32、next方法：获取对象集合中每一个元素的下一个兄弟节点(可以选择性的带上过滤选择器)
+         * 33、parents方法：获取对象集合每个元素所有的祖先元素。如果css选择器参数给出，过滤出符合条件的元素
+         * 34、
+         * 
          */
         //------------------------------------------------------------
         $.fn = {
@@ -764,6 +771,25 @@
             },
             is: function(selector) {
               return this.length > 0 && xepto.matches(this[0], selector)
+            },
+            last: function() {
+                var el = this[this.length -1]
+                return el && !isObject(el) ? el : $(el)
+            },
+            next: function(selector) {
+                return $(this.pluck('nextElementSibling')).filter(selector || '*')
+            },
+            parents: function(selector) {
+                var ancestors = [], nodes = this;
+                while (nodes.length > 0) {
+                    nodes = $.map(nodes, function(node) {
+                        if ((node = node.parentNode) && !isDocument(node) && ancestors.indexOf(node) < 0) {
+                            ancestors.push(node)
+                            return node
+                        }
+                    })
+                }
+                return filtered(ancestors, selector)
             }
 
         }
