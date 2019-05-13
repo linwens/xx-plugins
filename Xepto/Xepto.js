@@ -429,6 +429,8 @@
          * 给$对象上增加fn对象，存储公共方法
          * 0、forEach方法：遍历对象集合中每个元素，当函数返回 false 的时候，遍历不会停止，直接使用的是数组的forEach方法
          * 0、indexOf方法就是数组的indexOf
+         * 0、push方法：添加元素到当前对象集合的最后
+         * 0、reduce方法：reduce() 方法接收一个函数作为累加器，数组中的每个值（从左到右）开始缩减，最终计算为一个值
          * 1、ready方法：判断document是否加载完成
          * 2、find方法：
          * 3、filter方法：过滤对象集合，返回对象集合中满足css选择器的项。如果参数为一个函数，函数返回有实际值得时候，元素才会被返回。在函数中， this 关键字指向当前的元素
@@ -470,8 +472,9 @@
          * 31、last方法：获取对象集合中最后一个元素
          * 32、next方法：获取对象集合中每一个元素的下一个兄弟节点(可以选择性的带上过滤选择器)
          * 33、parents方法：获取对象集合每个元素所有的祖先元素。如果css选择器参数给出，过滤出符合条件的元素
-         * 34、
-         * 
+         * 34、position方法：获取对象集合中第一个元素的位置
+         * 35、prev方法：获取对象集合中每一个元素的前一个兄弟节点，通过选择器来进行过滤
+         * 36、remove方法：从其父节点中删除当前集合中的元素，有效的从dom中移除
          */
         //------------------------------------------------------------
         $.fn = {
@@ -479,6 +482,8 @@
             length:0,
             forEach: emptyArray.forEach, //+? 这样操作的目的是什么？
             indexOf: emptyArray.indexOf,
+            push: emptyArray.push,
+            reduce: emptyArray.reduce,
             ready: function (callback) {
                 if(readyRE.test(document.readyState) && document.body){
                     callback($)
@@ -790,6 +795,35 @@
                     })
                 }
                 return filtered(ancestors, selector)
+            },
+            //?+
+            position: function() {
+                if (!this.length) return
+
+                var elem = this[0],
+                    offsetParent = this.offsetParent(),
+                    offset       = this.offset(),
+                    parentOffset = rootNodeRE.test(offsetParent[0].nodeName) ? { top: 0, left: 0} : offsetParent.offset();
+                offset.top  -= parseFloat( $(elem).css('margin-top')) || 0;
+                offset.left -= parseFloat( $(elem).css('margin-left')) || 0;
+
+                parentOffset.top += parseFloat( $(offsetParent[0]).css('border-top-width') ) || 0;
+                parentOffset.left += parseFloat( $(offsetParent[0]).css('border-left-width') ) || 0;
+
+                return {
+                    top:  offset.top  - parentOffset.top,
+                    left: offset.left - parentOffset.left
+                }
+            },
+            prev: function(selector) {
+                return $(this.pluck('previousElementSibling')).filter(selector || '*')
+            },
+            remove: function() {
+                return this.each(function() {
+                    if (this.parentNode != null) {
+                        this.parentNode.removeChild(this)
+                    }
+                })
             }
 
         }
