@@ -9,10 +9,10 @@
     <!-- <script src="https://zeptojs.com/zepto.js"></script> -->
 </head>
 <body>
-    <form>
+    <form action="ssss">
         <label for=""></label>
     </form>
-    <div>
+    <div style="width:2999px;height:2222px;">
         <p data-name="james" class="bb">钩子</p>
         <p class="aa">sss</p>
         <p><a href="javascript:;">链接</a></p>
@@ -23,7 +23,10 @@
     </script>
     <script>
         $(function($){
-          $('form').remove()
+            $('body').scrollTop(11)
+            $('body').scrollLeft(22)
+          console.log($('body').scrollTop())
+          console.log($('body').scrollLeft())
         })
     </script>
 </body>

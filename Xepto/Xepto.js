@@ -36,6 +36,8 @@
          * 17、cssNumber：
          * 18、capitalRE：校验大写
          * 19、rootNodeRE：校验body/html标签
+         * 20、propMap: 用于纠正一些大小写的属性写错
+         * 
          */
         //-----------------------------------------------------------
         var $, xepto = {};
@@ -67,6 +69,20 @@
         var cssNumber = { 'column-count': 1, 'columns': 1, 'font-weight': 1, 'line-height': 1,'opacity': 1, 'z-index': 1, 'zoom': 1 };
         var capitalRE = /([A-Z])/g;
         var rootNodeRE = /^(?:body|html)$/i;
+        var propMap = {
+            'tabindex': 'tabIndex',
+            'readonly': 'readOnly',
+            'for': 'htmlFor',
+            'class': 'className',
+            'maxlength': 'maxLength',
+            'cellspacing': 'cellSpacing',
+            'cellpadding': 'cellPadding',
+            'rowspan': 'rowSpan',
+            'colspan': 'colSpan',
+            'usemap': 'useMap',
+            'frameborder': 'frameBorder',
+            'contenteditable': 'contentEditable'
+        };
         /**
          * 初始化一些方法函数
          * 1、Z构造函数Z(dom, selector)
@@ -475,6 +491,13 @@
          * 34、position方法：获取对象集合中第一个元素的位置
          * 35、prev方法：获取对象集合中每一个元素的前一个兄弟节点，通过选择器来进行过滤
          * 36、remove方法：从其父节点中删除当前集合中的元素，有效的从dom中移除
+         * 37、removeAttr：移除当前对象集合中所有元素的指定属性
+         * 38、removeClass: 移除当前对象集合中所有元素的指定class。如果没有指定name参数，将移出所有的class
+         * 39、removeProp: 从集合的每个DOM节点中删除一个属性
+         * 40、replaceWith: 用给定的内容替换所有匹配的元素。(包含元素本身)
+         * 41、prop: 读取或设置dom元素的属性值
+         * 42、scrollTop：获取或设置页面上的滚动元素或者整个窗口向下滚动的像素值
+         * 43、scrollLeft：获取或设置页面上的滚动元素或者整个窗口向右滚动的像素值
          */
         //------------------------------------------------------------
         $.fn = {
@@ -824,7 +847,64 @@
                         this.parentNode.removeChild(this)
                     }
                 })
-            }
+            },
+            removeAttr: function(name) {
+                return this.each(function() {
+                    this.nodeType === 1 && name.split(' ').forEach(function(attribute) {
+                        setAttribute(this, attribute)
+                    }, this)
+                })
+            },
+            removeClass: function(name) {
+                return this.each(function(idx) {
+                    if (!('className' in this)) return
+                    if (name === undefined) {
+                        return className(this, '')
+                    }
+                    classList = className(this)
+                    funcArg(this, name, idx, classList).split(/\s+/g).forEach(function(klass) {
+                        classList = classList.replace(classRE(klass), " ")
+                    })
+                    className(this, classList.trim())
+                })
+            },
+            removeProp: function(name) {
+                name = propMap[name] || name
+                return this.each(function() {
+                    delete this[name]
+                })
+            },
+            prop: function(name, value) {
+                name = propMap[name] || name
+                return (1 in arguments) ? this.each(function(idx) {
+                    this[name] = funcArg(this, value, idx, this[name])
+                }) : (this[0] && this[0][name])
+            },
+            replaceWith: function(newContent) {
+                return this.before(newContent).remove()
+            },
+            scrollTop: function(value) {
+                if (!this.length) return
+                var hasScrollTop = 'scrollTop' in this[0]
+                if (value === undefined) {
+                    return hasScrollTop ? this[0].scrollTop : this[0].pageYOffset
+                }
+                return this.each(hasScrollTop ? function() {
+                    this.scrollTop = value
+                } : function() {
+                    this.scrollTop(this.scrollX, value)
+                })
+            },
+            scrollLeft: function(value){
+                if (!this.length) return
+                var hasScrollLeft = 'scrollLeft' in this[0]
+                if (value === undefined) {
+                    return hasScrollLeft ? this[0].scrollLeft : this[0].pageXOffset
+                }
+                return this.each(hasScrollLeft ?
+                  function(){ this.scrollLeft = value } :
+                  function(){ this.scrollTo(value, this.scrollY) })
+              },
 
         }
         //以下遍历生成插入dom的方法
