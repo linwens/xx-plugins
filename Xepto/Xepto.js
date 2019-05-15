@@ -37,7 +37,7 @@
          * 18、capitalRE：校验大写
          * 19、rootNodeRE：校验body/html标签
          * 20、propMap: 用于纠正一些大小写的属性写错
-         * 
+         * 21、elementDisplay：用于缓存元素的默认display属性
          */
         //-----------------------------------------------------------
         var $, xepto = {};
@@ -83,6 +83,7 @@
             'frameborder': 'frameBorder',
             'contenteditable': 'contentEditable'
         };
+        var elementDisplay = {};
         /**
          * 初始化一些方法函数
          * 1、Z构造函数Z(dom, selector)
@@ -224,6 +225,19 @@
           } catch (err) {
             return value
           }
+        }
+        function defaultDisplay(nodeName) {
+            var element, display
+            if (!elementDisplay[nodeName]) {
+                element = document.createElement(nodeName)
+                document.body.appendChild(element)
+                display = getComputedStyle(element, '').getPropertyValue("display")
+                element.parentNode.removeChild(element)
+                // 因为不是所有可见的元素的display都是block, 如table
+                display == "none" && (display = "block")
+                elementDisplay[nodeName] = display
+            }
+            return elementDisplay[nodeName]
         }
         /**
          * 声明xepto里的方法
@@ -498,6 +512,11 @@
          * 41、prop: 读取或设置dom元素的属性值
          * 42、scrollTop：获取或设置页面上的滚动元素或者整个窗口向下滚动的像素值
          * 43、scrollLeft：获取或设置页面上的滚动元素或者整个窗口向右滚动的像素值
+         * 44、show：恢复对象集合中每个元素默认的“display”值
+         * 45、siblings：获取对象集合中所有元素的兄弟节点
+         * 46、text: 获取或者设置所有对象集合中元素的文本内容。当没有给定content参数时，返回当前对象集合中第一个元素的文本内容（包含子节点中的文本内容）。当给定content参数时，使用它替换对象集合中所有元素的文本内容
+         * 47、
+         * 48、
          */
         //------------------------------------------------------------
         $.fn = {
@@ -904,7 +923,28 @@
                 return this.each(hasScrollLeft ?
                   function(){ this.scrollLeft = value } :
                   function(){ this.scrollTo(value, this.scrollY) })
-              },
+            },
+            show: function() {
+                return this.each(function() {
+                    this.style.display == "none" && (this.style.display = '')
+                    if (getComputedStyle(this, '').getPropertyValue("display") == "none") {
+                        this.style.display = defaultDisplay(this.nodeName)
+                    }
+                })
+            },
+            siblings: function(selector) {
+                return filtered(this.map(function(i, el) {
+                    return filter.call(children(el.parentNode), function(child) {
+                        return child !== el
+                    })
+                }), selector)
+            },
+            text: function(text) {
+                return 0 in arguments ? this.each(function(idx) {
+                    var newText = funcArg(this, text, idx, this.textContent)
+                    this.textContent = newText == null ? '' : ''+newText
+                }) : (0 in this ? this.pluck('textContent').join("") : null)
+            }
 
         }
         //以下遍历生成插入dom的方法
