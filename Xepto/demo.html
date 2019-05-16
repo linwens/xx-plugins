@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Xepto</title>
-    <script src="./Xepto.js"></script>
-    <!-- <script src="https://zeptojs.com/zepto.js"></script> -->
+    <!-- <script src="./Xepto.js"></script> -->
+    <script src="https://zeptojs.com/zepto.js"></script>
 </head>
 <body>
     <form action="ssss" style="display: none;">
@@ -18,12 +18,15 @@
         <p><a href="javascript:;">链接</a></p>
         <p class="aa">ddddxxx</p>
     </div>
+    <p>发色鹅鹅鹅</p>
     <script type="text/javascript">
         $('<p>A note below the label</p>').appendTo('div')
     </script>
     <script>
         $(function($){
-            console.log($('p').text(1111));
+            $('a').wrap('<span>')
+            $('p').wrapAll('<li>')
+            $('p.aa').wrapInner('<span>')
         })
     </script>
 </body>

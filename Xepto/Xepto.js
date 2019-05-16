@@ -475,8 +475,8 @@
          * 8、addClass方法：为每个匹配的元素添加指定的class类名。多个class类名使用空格分隔。
          * 9、after方法：
          * 9、prepend方法：
-         * 9、before方法：
-         * 9、append方法：
+         * 9、before方法：在匹配每个元素的前面插入内容（注：外部插入）
+         * 9、append方法：在每个匹配的元素末尾插入内容（注：内部插入）
          * 10、attr方法：读取或设置dom的属性
          * 11、children方法：获得每个匹配元素集合元素的直接子元素，如果给定selector，那么返回的结果中只包含符合css选择器的元素(不包括文字及注释节点)
          * 12、map方法:遍历对象集合中的所有元素。通过遍历函数返回值形成一个新的集合对象
@@ -515,8 +515,13 @@
          * 44、show：恢复对象集合中每个元素默认的“display”值
          * 45、siblings：获取对象集合中所有元素的兄弟节点
          * 46、text: 获取或者设置所有对象集合中元素的文本内容。当没有给定content参数时，返回当前对象集合中第一个元素的文本内容（包含子节点中的文本内容）。当给定content参数时，使用它替换对象集合中所有元素的文本内容
-         * 47、
-         * 48、
+         * 47、toggle：显示或隐藏匹配元素。如果 setting为true，相当于show 法。如果setting为false。相当于 hide方法。
+         * 48、toggleClass：在匹配的元素集合中的每个元素上添加或删除一个或多个样式类
+         * 49、unwrap:移除集合中每个元素的直接父节点，并把他们的子元素保留在原来的位置
+         * 50、val：获取或设置匹配元素的值。当没有给定value参数，返回第一个元素的值。如果是<select multiple>标签，则返回一个数组。当给定value参数，那么将设置所有元素的值。
+         * 51、wrap:在每个匹配的元素外层包上一个html元素。
+         * 52、wrapAll: 在所有匹配元素外面包一个单独的结构
+         * 53、wrapInner:将每个元素中的内容包裹在一个单独的结构中
          */
         //------------------------------------------------------------
         $.fn = {
@@ -944,6 +949,74 @@
                     var newText = funcArg(this, text, idx, this.textContent)
                     this.textContent = newText == null ? '' : ''+newText
                 }) : (0 in this ? this.pluck('textContent').join("") : null)
+            },
+            toggle: function(setting) {
+                return this.each(function(){
+                    var el = $(this);
+                    (setting === undefined ? el.css("display") == "none" : setting) ? el.show() : el.hide()
+                })
+            },
+            toggleClass: function(name, when) {
+                if (!name) return this;
+                return this.each(function(idx) {
+                    var $this = $(this),
+                        names = funcArg(this, name, idx, className(this))
+                    names.split(/\s+/g).forEach(function(klass) {
+                        (when === undefined ? !$this.hasClass(klass) : when) ? $this.addClass(klass) : $this.removeClass(klass)
+                    })
+                })
+            },
+            unwrap: function() {
+                this.parent().each(function(){
+                    $(this).replaceWith($(this).children())
+                })
+                return this
+            },
+            val: function(value) {
+                if (0 in arguments) {
+                    if (value == null) {
+                        value = ""
+                    }
+                    return this.each(function(idx) {
+                        this.value = funcArg(this, value, idx, this.value)
+                    })
+                } else {
+                    return this[0] && (this[0].multiple ? $(this[0]).find('option').filter(function() {
+                        return this.selected
+                    }).pluck('value') : this[0].value)
+                }
+            },
+            wrap: function(structure) {
+                var func = isFunction(structure)
+                if (this[0] && !func) {
+                    var dom   = $(structure).get(0),
+                        clone = dom.parentNode || this.length > 1
+                }
+                return this.each(function(index){
+                    $(this).wrapAll(
+                        func ? structure.call(this, index) : clone ? dom.cloneNode(true) : dom
+                    )
+                })
+            },
+            wrapAll: function(structure) {
+                if (this[0]) {
+                    $(this[0]).before(structure = $(structure))
+                    var children;
+                    while ( (children = structure.children()).length ) {
+                        structure = children.first()
+                    }
+                    $(structure).append(this)
+                }
+                return this
+            },
+            wrapInner: function(structure) {
+                var func = isFunction(structure)
+                return this.each(function(index) {
+                    var self     = $(this),
+                        contents = self.contents(),
+                        dom      = func ? structure.call(this, index) : structure;
+                    contents.length ? contents.wrapAll(dom) : self.append(dom)
+                })
             }
 
         }
