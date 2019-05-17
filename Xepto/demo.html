@@ -27,6 +27,11 @@
             $('a').wrap('<span>')
             $('p').wrapAll('<li>')
             $('p.aa').wrapInner('<span>')
+            var a = $.Event('change', { bubbles: false })
+            console.log(a)
+            window.onload = function(e) {
+              console.log(e)
+            }
         })
     </script>
 </body>

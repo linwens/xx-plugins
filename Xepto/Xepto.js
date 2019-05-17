@@ -12,6 +12,7 @@
 (function(global, factory) {
     factory(global)
 }(this, function(window) {
+    // 以下为核心方法
     var Xepto = (function(){
         /**
          * 初始化变量
@@ -1118,5 +1119,65 @@
             }
         }
     })();
+    // 在核心基础上增加event事件处理函数
+    ;(function($) {
+      /**
+       * 1、specialEvents: 缓存一些特殊的事件，处理一些基础事件在不同浏览器上的兼容问题
+       * 
+       */
+      var specialEvents = {};
+          specialEvents.click = specialEvents.mousedown = specialEvents.mouseup = specialEvents.mousemove = 'MouseEvents'
+
+      /**
+       * 1、compatible：函数用来修正 event 对象的浏览器差异，向 event 对象中添加了 几个处理兼容的函数及熟悉。如：isDefaultPrevented、isImmediatePropagationStopped、isPropagationStopped 几个方法，对不支持 timeStamp 的浏览器，向 event 对象中添加 timeStamp 属性。
+       */
+      var returnTrue  = function(){ return true },
+          returnFalse = function(){ return false },
+          ignoreProperties = /^([A-Z]|returnValue$|layer[XY]$|webkitMovement[XY]$)/,
+          eventMethods = {
+            preventDefault: 'isDefaultPrevented',
+            stopImmediatePropagation: 'isImmediatePropagationStopped',
+            stopPropagation: 'isPropagationStopped'
+          }
+      function compatible(event, source) {
+        if (source || !event.isDefaultPrevented) {
+          source || (source = event)
+          $.each(eventMethods, function(name, predicate) {
+            var sourceMethod = source[name]
+            event[name] = function(){
+              this[predicate] = returnTrue
+              return sourceMethod && sourceMethod.apply(source, arguments)
+            }
+            event[predicate] = returnFalse
+          })
+          event.timeStamp || (event,timeStamp = Date.now())
+
+          if (source.defaultPrevented !== undefined ? source.defaultPrevented : ('returnValue' in source ? source.returnValue === false : source.getPreventDefault && source.getPreventDefault()) ) {
+            event.isDefaultPrevented = returnTrue
+          }
+        }
+        return event
+      }
+
+      /**
+       * 1、Event方法：创建并初始化一个指定的DOM事件。如果给定properties对象，使用它来扩展出新的事件对象。默认情况下，事件被设置为冒泡方式；这个可以通过设置bubbles为false来关闭。
+       */
+      $.Event = function(type, props) {
+        if (!isString(type)) {
+          props = type,
+          type = props.type;
+        }
+        var event   = document.createEvent(specialEvents[type] || 'Events'), //创建基础事件模块
+            bubbles = true; // 默认设置事件冒泡
+        if (props) {
+          for ( var name in props ) {
+            (name == 'bubbles') ? (bubbles = !!props[name]) : (event[name] = props[name])
+          }
+        }
+        // 初始化事件，包含：定义事件名
+        event.initEvent(type, bubbles, true)
+        return compatible(event)
+      }
+    })(xepto);
     return Xepto
 }))
