@@ -1135,9 +1135,9 @@
           returnFalse = function(){ return false },
           ignoreProperties = /^([A-Z]|returnValue$|layer[XY]$|webkitMovement[XY]$)/,
           eventMethods = {
-            preventDefault: 'isDefaultPrevented',
-            stopImmediatePropagation: 'isImmediatePropagationStopped',
-            stopPropagation: 'isPropagationStopped'
+            preventDefault: 'isDefaultPrevented', // 如果 defaultPrevented缺失或在某些浏览器下不可靠的时候
+            stopImmediatePropagation: 'isImmediatePropagationStopped', // 如果stopImmediatePropagation()被该事件的实例调用，那么返回true。Zepto在不支持该原生方法的浏览器中实现它，  （例如老版本的Android）
+            stopPropagation: 'isPropagationStopped' // 如果stopPropagation()被该事件的实例调用，那么返回true
           }
       function compatible(event, source) {
         if (source || !event.isDefaultPrevented) {
