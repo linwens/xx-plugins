@@ -364,7 +364,8 @@
         /**
          * 给$对象上增加方法
          * 1、each方法遍历可枚举的引用类型,回调函数里传参得是（索引，项）
-         * 2、type方法
+         * 2、type方法：
+         * 2、isFunction方法：
          * 3、contains方法:检查父节点是否包含给定的dom节点，如果两者是相同的节点，则返回 false
          * 4、camelCase方法
          * 5、extend方法扩展目标对象的属性
@@ -378,6 +379,7 @@
          */
         //-----------------------------------------------------------
         $.type = type;
+        $.isFunction = isFunction;
         $.each = function(elements, callback) {
             var i, key;
             if (likeArray(elements)) {
@@ -1126,10 +1128,18 @@
        * 
        */
       var specialEvents = {};
-          specialEvents.click = specialEvents.mousedown = specialEvents.mouseup = specialEvents.mousemove = 'MouseEvents'
+          specialEvents.click = specialEvents.mousedown = specialEvents.mouseup = specialEvents.mousemove = 'MouseEvents';
+      var slice = Array.prototype.slice;
+      var isFunction = $.isFunction;
+      var isString = function(obj) {
+          return typeof obj == 'string'
+      };
+      var _zid = 1; // 设置一个标识符
 
       /**
        * 1、compatible：函数用来修正 event 对象的浏览器差异，向 event 对象中添加了 几个处理兼容的函数及熟悉。如：isDefaultPrevented、isImmediatePropagationStopped、isPropagationStopped 几个方法，对不支持 timeStamp 的浏览器，向 event 对象中添加 timeStamp 属性。
+       * 2、zid方法：给函数增加标识符，方便查找
+       * 3、remove方法：
        */
       var returnTrue  = function(){ return true },
           returnFalse = function(){ return false },
@@ -1158,7 +1168,20 @@
         }
         return event
       }
-
+      function zid(element) {
+        return element._zid || (element._zid = _zid++)
+      }
+      function remove(element, events, fn, selector, capture) {
+          var id = zid(element)
+          ;(events ||'').split(/\s/).forEach(function(event) {
+              findHandlers(element, event, fn, selector).forEach(function(handler) {
+                  delete handlers[id][handler.i]
+              })
+              if ('removeEventListener' in element) {
+                  element.removeEventListener(realEvent(handler.e), handler.proxy, eventCapture(handler, capture))
+              }
+          })
+      }
       /**
        * 1、Event方法：创建并初始化一个指定的DOM事件。如果给定properties对象，使用它来扩展出新的事件对象。默认情况下，事件被设置为冒泡方式；这个可以通过设置bubbles为false来关闭。
        */
@@ -1178,6 +1201,71 @@
         event.initEvent(type, bubbles, true)
         return compatible(event)
       }
-    })(xepto);
+      /**
+       * 2、proxy方法：接受一个函数，然后返回一个新函数，并且这个新函数始终保持了特定的上下文(context)语境，新函数中this指向context参数
+       */
+      $.proxy = function(fn, context) {
+          var args = (2 in arguments) && slice.call(arguments, 2)
+          if (isFunction(fn)) {
+              var proxyFn = function() {
+                  return fn.apply(context, args ? args.concat(slice.call(arguments)) : arguments )
+              }
+              proxyFn._zid = zid(fn)
+              return proxyFn
+          } else if (isString(context)) {
+              if (args) {
+                  args.unshift(fn[context], fn)
+                  return $.proxy.apply(null, args)
+              } else {
+                  return $.proxy(fn[context], fn)
+              }
+          } else {
+              throw new TypeError('expected function')
+          }
+      }
+      /**
+       * 给集合对象添加方法。
+       * 1、on方法：添加事件处理程序到对象集合中得元素上。
+       */
+      $.fn.on = function(event, selector, data, callback, one) {
+          var autoRemove, delegator, $this = this;
+          if (event && !isString(event)) { // 当event存在且为对象
+              $.each(event, function(type, fn){
+                  $this.on(type, selector, data, fn, one)
+              })
+              return $this
+          }
+          if (!isString(selector) && !isFunction(callback) && callback !== false) {
+              callback = data, data = selector, selector = undefined
+          }
+          if (callback === undefined || data === false) {
+              callback = data, data = undefined
+          }
+          if (callback === false) {
+              callback = returnFalse
+          }
+          return $this.each(function(_, element) {
+              if (one) {
+                  autoRemove = function(e) {
+                      remove(element, e.type, callback)
+                      return callback.apply(this, arguments)
+                  }
+              }
+              if (selector) {
+                  delegator = function(e) {
+                      var evt, match = $(e.target).closest(selector, element).get(0)
+                      if (match && match !== element) {
+                          evt = $.extend(createProxy(e), {
+                              currentTarget: match,
+                              liveFired: element
+                          })
+                          return (autoRemove || callback).apply(match, [evt].concat(slice.call(arguments,1)))
+                      }
+                  }
+              }
+              add(element, event, callback, data, selector, delegator || autoRemove)
+          })
+      }
+    })(Xepto);
     return Xepto
 }))
