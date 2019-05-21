@@ -1125,7 +1125,14 @@
     ;(function($) {
       /**
        * 1、specialEvents: 缓存一些特殊的事件，处理一些基础事件在不同浏览器上的兼容问题
-       * 
+       * 2、_zid：设置一个标识符
+       * 3、handlers
+       * 4、focusinSupported
+       * 5、focus
+       * 6、hover
+       * 7、
+       * 8、
+       * 9、
        */
       var specialEvents = {};
           specialEvents.click = specialEvents.mousedown = specialEvents.mouseup = specialEvents.mousemove = 'MouseEvents';
@@ -1134,12 +1141,30 @@
       var isString = function(obj) {
           return typeof obj == 'string'
       };
-      var _zid = 1; // 设置一个标识符
-
+      var _zid = 1;
+      var handlers = {};
+      var focusinSupported = 'onfocusin' in window;
+      var focus = {
+          focus: 'focusin',
+          blur: 'focusout'
+      };
+      var hover = {
+          mouseenter: 'mouseover',
+          mouseleave: 'mouseout'
+      }
       /**
        * 1、compatible：函数用来修正 event 对象的浏览器差异，向 event 对象中添加了 几个处理兼容的函数及熟悉。如：isDefaultPrevented、isImmediatePropagationStopped、isPropagationStopped 几个方法，对不支持 timeStamp 的浏览器，向 event 对象中添加 timeStamp 属性。
        * 2、zid方法：给函数增加标识符，方便查找
        * 3、remove方法：
+       * 4、findHandlers方法：
+       * 5、eventCapture：
+       * 6、realEvent：
+       * 7、parse：
+       * 8、matcherFor：
+       * 9、createProxy：
+       * 10、add
+       * 11、
+       * 12、
        */
       var returnTrue  = function(){ return true },
           returnFalse = function(){ return false },
@@ -1182,6 +1207,80 @@
               }
           })
       }
+      function findHandlers(element, event, fn, selector) {
+          event = parse(event)
+          if (event.ns) {
+              var matcher = matcherFor(event.ns)
+          }
+          return (handlers[zid(element)] || []).filter(function(handler) {
+              return handler && (!event.e || handler.e == event.e) && (!event.ns || matcher.test(handler.ns)) && (!fn || zid(handler.fn) === zid(fn)) && (!selector || handler.sel == selector)
+          })
+      }
+      function realEvent(type) {
+        return hover[type] || (focusinSupported && focus[type]) || type
+      }
+      function eventCapture(handler, captureSetting) {
+        return handler.del && (!focusinSupported && (handler.e in focus)) || !!captureSetting
+      }
+      function parse(event) {
+          var parts = ('' + event).split('.')
+          return {
+              e: parts[0],
+              ns: parts.slice(1).sort().join(' ')
+          }
+      }
+      function matcherFor(ns) {
+          return new RegExp('(?:^| )' + ns.replace(' ', ' .* ?') + '(?: |$)')
+      }
+      function createProxy(event) {
+          var key, proxy = { originalEvent: event}
+          for (key in event) {
+              if (!ignoreProperties.test(key) && event[key] !== undefined) {
+                  proxy[key] = event[key]
+              }
+          }
+          return compatible(proxy, event)
+      }
+      function add(element, events, fn, data, selector, delegator, capture) {
+          var id  = zid(element),
+              set = (handlers[id] || (handlers[id] = []))
+          events.split(/\s/).forEach(function(event) {
+              if (event == 'ready') {
+                  return $(document).ready(fn)
+              }
+              var handler = parse(event);
+                  handler.fn = fn;
+                  handler.sel = selector;
+
+              if (handler.e in hover) {
+                  fn = function(e) {
+                      var related = e.relatedTarget
+                      if (!related || (related !== this && !$.contains(this, related))) {
+                          return handler.fn.apply(this, arguments)
+                      }
+                  }
+              }
+              handler.del = delegator;
+              var callback = delegator || fn;
+              handler.proxy = function(e) {
+                  e = compatible(e)
+                  if (e.isImmediatePropagationStopped()) return
+                  e.data = data;
+                  var result = callback.apply(element, e._args == undefined ? [e] : [e].concat(e._args))
+                  if (result === false) {
+                      e.preventDefault(),
+                      e.stopPropagation()
+                  }
+                  return result
+              }
+              handler.i = set.length
+              set.push(handler)
+              if ('addEventListener' in element) {
+                  element.addEventListener(realEvent(handler.e), handler.proxy, eventCapture(handler, capture))
+              }
+          })
+      }
+      $.event = {add: add, remove: remove}
       /**
        * 1、Event方法：创建并初始化一个指定的DOM事件。如果给定properties对象，使用它来扩展出新的事件对象。默认情况下，事件被设置为冒泡方式；这个可以通过设置bubbles为false来关闭。
        */
