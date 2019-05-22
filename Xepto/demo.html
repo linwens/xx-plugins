@@ -12,7 +12,7 @@
     <form action="ssss" style="display: none;">
         <label for="">fdadadfsf</label>
     </form>
-    <div style="width:2999px;height:2222px;">
+    <div class="test" style="width:2999px;height:2222px;">
         <p data-name="james" class="bb">钩子</p>
         <p class="aa">sss</p>
         <p><a href="javascript:;">链接</a></p>
@@ -32,11 +32,12 @@
             window.onload = function(e) {
               console.log(e)
             }
-            var obj = {name: 'Zepto'},
+            var obj = {name: 'Zepto'},obj2 = {name: 'Xepto'};
             handler = function(){ console.log("hello from + ", this.name) }
 
             // ensures that the handler will be executed in the context of `obj`:
-            $(document).on('click', $.proxy(handler, obj))
+            $('div.test').on('click', $.proxy(handler, obj2))
+            $('p.aa').triggerHandler('click')
         })
     </script>
 </body>

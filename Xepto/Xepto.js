@@ -380,6 +380,8 @@
         //-----------------------------------------------------------
         $.type = type;
         $.isFunction = isFunction;
+        $.isWindow = isWindow;
+        $.isPlainObject = isPlainObject;
         $.each = function(elements, callback) {
             var i, key;
             if (likeArray(elements)) {
@@ -1201,10 +1203,10 @@
           ;(events ||'').split(/\s/).forEach(function(event) {
               findHandlers(element, event, fn, selector).forEach(function(handler) {
                   delete handlers[id][handler.i]
+                  if ('removeEventListener' in element) {
+                      element.removeEventListener(realEvent(handler.e), handler.proxy, eventCapture(handler, capture))
+                  }
               })
-              if ('removeEventListener' in element) {
-                  element.removeEventListener(realEvent(handler.e), handler.proxy, eventCapture(handler, capture))
-              }
           })
       }
       function findHandlers(element, event, fn, selector) {
@@ -1325,6 +1327,11 @@
       /**
        * 给集合对象添加方法。
        * 1、on方法：添加事件处理程序到对象集合中得元素上。
+       * 2、off方法：移除通过 on 添加的事件.移除一个特定的事件处理程序， 必须通过用on()添加的那个相同的函数。否则，只通过事件类型调用此方法将移除该类型的所有处理程序。如果没有参数，将移出当前元素上全部的注册事件。
+       * 3、one方法：添加一个处理事件到元素，当第一次执行事件以后，该事件将自动解除绑定，保证处理函数在每个元素上最多执行一次
+       * 4、trigger方法：在对象集合的元素上触发指定的事件
+       * 5、triggerHandler方法：像 trigger，它只在当前元素上触发事件，但不冒泡。
+       * 6、bind：为一个元素绑定一个处理事件
        */
       $.fn.on = function(event, selector, data, callback, one) {
           var autoRemove, delegator, $this = this;
@@ -1365,6 +1372,63 @@
               add(element, event, callback, data, selector, delegator || autoRemove)
           })
       }
+      $.fn.off = function(event, selector, callback) {
+          var $this = this
+          if (event && !isString(event)) {
+              $.each(event, function(type, fn) {
+                  $this.off(type, selector, fn)
+              })
+              return $this
+          }
+          if (!isString(selector) && !isFunction(callback) && callback !== false) {
+              callback = selector, selector = undefined
+          }
+          if (callback === false) {
+              callback = returnFalse
+          }
+          return $this.each(function(){
+              remove(this, event, callback, selector)
+          })
+      }
+      $.fn.one = function(event, selector, data,  callback) {
+          return this.on(event, selector, data, callback, 1)
+      }
+      $.fn.trigger = function(event, args) {
+          event = (isString(event) || $.isPlainObject(event)) ? $.Event(event) : compatible(event)
+          event._args = args
+          return this.each(function() {
+              if (event.type in focus && typeof this[event.type] == "function") {
+                  this[event.type]()
+              } else if ('dispatchEvent' in this) {
+                  this.dispatchEvent(event)
+              } else {
+                  $(this).triggerHandler(event, args)
+              }
+          })
+      }
+      $.fn.triggerHandler = function(event, args) {
+          var e, result;
+          this.each(function(i, element){
+              e = createProxy(isString(event) ? $.Event(event) : event)
+              e._args = args
+              e.target = element
+              $.each(findHandlers(element, event.type || event), function(i, handler){
+                  result = handler.proxy(e)
+                  if (e.isImmediatePropagationStopped()) {
+                      return false
+                  }
+              })
+          })
+          return result
+      }
+      $.fn.bind = function(event, data, callback){
+          return this.on(event, data, callback)
+      }
+      ;('focusin focusout focus blur load resize scroll unload click dblclick' + 'mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave' + 'change select keydown keypress keyup error').split(' ').forEach(function(event) {
+          $.fn[event] = function(callback) {
+              return (0 in arguments) ? this.bind(event, callback) : this.trigger(event)
+          }
+      })
     })(Xepto);
     return Xepto
 }))
