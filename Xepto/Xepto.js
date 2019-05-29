@@ -1432,7 +1432,65 @@
     })(Xepto);
     // 增加 ajax相关
     ;(function($) {
-
+        /**
+         * 一些变量
+         * 1、jsonType:
+         * 2、htmlType:
+         */
+        var jsonType = 'aplication/json';
+        var htmlType = 'text/html';
+        /**
+         * 一些方法函数
+         * 1、empty函数：用于作为默认的回调函数
+         */
+        function empty() {}
+        function ajaxStart(setting) {
+            if (settings.global && $.active++ === 0) { // i++会在语句执行完以后再自增
+                triggerGlobal(settings, null, 'ajaxStart')
+            }
+        }
+        /**
+         * 1、ajax方法:
+         * 2、ajaxSettings: 保存ajax的默认配置
+         * 3、active
+         */
+        $.ajax = function(options) {
+            var settings = $.extend({}, options || {}),
+                deferred = $.deferred && $.deferred(), //需要deferred模块的引入，实现promise
+                urlAnchor, hashIndex;
+            for (key in $.ajaxSettings) {
+                if (settings[key] === undefined) {
+                    settings[key] = $.ajaxSettings[key]
+                }
+            }
+            ajaxStart(settings)
+        }
+        // 默认配置项
+        $.ajaxSettings = {
+            type: 'GET',
+            beforeSend: empty,
+            success: empty,
+            error: empty,
+            complete: empty,
+            context: null,
+            global: true,
+            xhr: function() {
+                return new window.XMLHttpRequest()
+            },
+            accepts: {
+                script: 'text/javascript, application/javascript, application/x-javascript',
+                json: jsonType,
+                xml: 'application/xml, text/xml',
+                html: htmlType,
+                text: 'text/plain'
+            },
+            crossDomain: false,
+            timeout: 0,
+            processData: true,
+            cache: true,
+            dataFilter: empty
+        }
+        $.active = 0
     })(xepto);
     return Xepto
 }))
