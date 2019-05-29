@@ -364,7 +364,8 @@
         /**
          * 给$对象上增加方法
          * 1、each方法遍历可枚举的引用类型,回调函数里传参得是（索引，项）
-         * 2、type方法
+         * 2、type方法：
+         * 2、isFunction方法：
          * 3、contains方法:检查父节点是否包含给定的dom节点，如果两者是相同的节点，则返回 false
          * 4、camelCase方法
          * 5、extend方法扩展目标对象的属性
@@ -378,6 +379,9 @@
          */
         //-----------------------------------------------------------
         $.type = type;
+        $.isFunction = isFunction;
+        $.isWindow = isWindow;
+        $.isPlainObject = isPlainObject;
         $.each = function(elements, callback) {
             var i, key;
             if (likeArray(elements)) {
@@ -1123,13 +1127,46 @@
     ;(function($) {
       /**
        * 1、specialEvents: 缓存一些特殊的事件，处理一些基础事件在不同浏览器上的兼容问题
-       * 
+       * 2、_zid：设置一个标识符
+       * 3、handlers
+       * 4、focusinSupported
+       * 5、focus
+       * 6、hover
+       * 7、
+       * 8、
+       * 9、
        */
       var specialEvents = {};
-          specialEvents.click = specialEvents.mousedown = specialEvents.mouseup = specialEvents.mousemove = 'MouseEvents'
-
+          specialEvents.click = specialEvents.mousedown = specialEvents.mouseup = specialEvents.mousemove = 'MouseEvents';
+      var slice = Array.prototype.slice;
+      var isFunction = $.isFunction;
+      var isString = function(obj) {
+          return typeof obj == 'string'
+      };
+      var _zid = 1;
+      var handlers = {};
+      var focusinSupported = 'onfocusin' in window;
+      var focus = {
+          focus: 'focusin',
+          blur: 'focusout'
+      };
+      var hover = {
+          mouseenter: 'mouseover',
+          mouseleave: 'mouseout'
+      }
       /**
        * 1、compatible：函数用来修正 event 对象的浏览器差异，向 event 对象中添加了 几个处理兼容的函数及熟悉。如：isDefaultPrevented、isImmediatePropagationStopped、isPropagationStopped 几个方法，对不支持 timeStamp 的浏览器，向 event 对象中添加 timeStamp 属性。
+       * 2、zid方法：给函数增加标识符，方便查找
+       * 3、remove方法：
+       * 4、findHandlers方法：
+       * 5、eventCapture：
+       * 6、realEvent：
+       * 7、parse：
+       * 8、matcherFor：
+       * 9、createProxy：
+       * 10、add
+       * 11、
+       * 12、
        */
       var returnTrue  = function(){ return true },
           returnFalse = function(){ return false },
@@ -1158,7 +1195,94 @@
         }
         return event
       }
+      function zid(element) {
+        return element._zid || (element._zid = _zid++)
+      }
+      function remove(element, events, fn, selector, capture) {
+          var id = zid(element)
+          ;(events ||'').split(/\s/).forEach(function(event) {
+              findHandlers(element, event, fn, selector).forEach(function(handler) {
+                  delete handlers[id][handler.i]
+                  if ('removeEventListener' in element) {
+                      element.removeEventListener(realEvent(handler.e), handler.proxy, eventCapture(handler, capture))
+                  }
+              })
+          })
+      }
+      function findHandlers(element, event, fn, selector) {
+          event = parse(event)
+          if (event.ns) {
+              var matcher = matcherFor(event.ns)
+          }
+          return (handlers[zid(element)] || []).filter(function(handler) {
+              return handler && (!event.e || handler.e == event.e) && (!event.ns || matcher.test(handler.ns)) && (!fn || zid(handler.fn) === zid(fn)) && (!selector || handler.sel == selector)
+          })
+      }
+      function realEvent(type) {
+        return hover[type] || (focusinSupported && focus[type]) || type
+      }
+      function eventCapture(handler, captureSetting) {
+        return handler.del && (!focusinSupported && (handler.e in focus)) || !!captureSetting
+      }
+      function parse(event) {
+          var parts = ('' + event).split('.')
+          return {
+              e: parts[0],
+              ns: parts.slice(1).sort().join(' ')
+          }
+      }
+      function matcherFor(ns) {
+          return new RegExp('(?:^| )' + ns.replace(' ', ' .* ?') + '(?: |$)')
+      }
+      function createProxy(event) {
+          var key, proxy = { originalEvent: event}
+          for (key in event) {
+              if (!ignoreProperties.test(key) && event[key] !== undefined) {
+                  proxy[key] = event[key]
+              }
+          }
+          return compatible(proxy, event)
+      }
+      function add(element, events, fn, data, selector, delegator, capture) {
+          var id  = zid(element),
+              set = (handlers[id] || (handlers[id] = []))
+          events.split(/\s/).forEach(function(event) {
+              if (event == 'ready') {
+                  return $(document).ready(fn)
+              }
+              var handler = parse(event);
+                  handler.fn = fn;
+                  handler.sel = selector;
 
+              if (handler.e in hover) {
+                  fn = function(e) {
+                      var related = e.relatedTarget
+                      if (!related || (related !== this && !$.contains(this, related))) {
+                          return handler.fn.apply(this, arguments)
+                      }
+                  }
+              }
+              handler.del = delegator;
+              var callback = delegator || fn;
+              handler.proxy = function(e) {
+                  e = compatible(e)
+                  if (e.isImmediatePropagationStopped()) return
+                  e.data = data;
+                  var result = callback.apply(element, e._args == undefined ? [e] : [e].concat(e._args))
+                  if (result === false) {
+                      e.preventDefault(),
+                      e.stopPropagation()
+                  }
+                  return result
+              }
+              handler.i = set.length
+              set.push(handler)
+              if ('addEventListener' in element) {
+                  element.addEventListener(realEvent(handler.e), handler.proxy, eventCapture(handler, capture))
+              }
+          })
+      }
+      $.event = {add: add, remove: remove}
       /**
        * 1、Event方法：创建并初始化一个指定的DOM事件。如果给定properties对象，使用它来扩展出新的事件对象。默认情况下，事件被设置为冒泡方式；这个可以通过设置bubbles为false来关闭。
        */
@@ -1178,6 +1302,133 @@
         event.initEvent(type, bubbles, true)
         return compatible(event)
       }
-    })(xepto);
+      /**
+       * 2、proxy方法：接受一个函数，然后返回一个新函数，并且这个新函数始终保持了特定的上下文(context)语境，新函数中this指向context参数
+       */
+      $.proxy = function(fn, context) {
+          var args = (2 in arguments) && slice.call(arguments, 2)
+          if (isFunction(fn)) {
+              var proxyFn = function() {
+                  return fn.apply(context, args ? args.concat(slice.call(arguments)) : arguments )
+              }
+              proxyFn._zid = zid(fn)
+              return proxyFn
+          } else if (isString(context)) {
+              if (args) {
+                  args.unshift(fn[context], fn)
+                  return $.proxy.apply(null, args)
+              } else {
+                  return $.proxy(fn[context], fn)
+              }
+          } else {
+              throw new TypeError('expected function')
+          }
+      }
+      /**
+       * 给集合对象添加方法。
+       * 1、on方法：添加事件处理程序到对象集合中得元素上。
+       * 2、off方法：移除通过 on 添加的事件.移除一个特定的事件处理程序， 必须通过用on()添加的那个相同的函数。否则，只通过事件类型调用此方法将移除该类型的所有处理程序。如果没有参数，将移出当前元素上全部的注册事件。
+       * 3、one方法：添加一个处理事件到元素，当第一次执行事件以后，该事件将自动解除绑定，保证处理函数在每个元素上最多执行一次
+       * 4、trigger方法：在对象集合的元素上触发指定的事件
+       * 5、triggerHandler方法：像 trigger，它只在当前元素上触发事件，但不冒泡。
+       * 6、bind：为一个元素绑定一个处理事件
+       */
+      $.fn.on = function(event, selector, data, callback, one) {
+          var autoRemove, delegator, $this = this;
+          if (event && !isString(event)) { // 当event存在且为对象
+              $.each(event, function(type, fn){
+                  $this.on(type, selector, data, fn, one)
+              })
+              return $this
+          }
+          if (!isString(selector) && !isFunction(callback) && callback !== false) {
+              callback = data, data = selector, selector = undefined
+          }
+          if (callback === undefined || data === false) {
+              callback = data, data = undefined
+          }
+          if (callback === false) {
+              callback = returnFalse
+          }
+          return $this.each(function(_, element) {
+              if (one) {
+                  autoRemove = function(e) {
+                      remove(element, e.type, callback)
+                      return callback.apply(this, arguments)
+                  }
+              }
+              if (selector) {
+                  delegator = function(e) {
+                      var evt, match = $(e.target).closest(selector, element).get(0)
+                      if (match && match !== element) {
+                          evt = $.extend(createProxy(e), {
+                              currentTarget: match,
+                              liveFired: element
+                          })
+                          return (autoRemove || callback).apply(match, [evt].concat(slice.call(arguments,1)))
+                      }
+                  }
+              }
+              add(element, event, callback, data, selector, delegator || autoRemove)
+          })
+      }
+      $.fn.off = function(event, selector, callback) {
+          var $this = this
+          if (event && !isString(event)) {
+              $.each(event, function(type, fn) {
+                  $this.off(type, selector, fn)
+              })
+              return $this
+          }
+          if (!isString(selector) && !isFunction(callback) && callback !== false) {
+              callback = selector, selector = undefined
+          }
+          if (callback === false) {
+              callback = returnFalse
+          }
+          return $this.each(function(){
+              remove(this, event, callback, selector)
+          })
+      }
+      $.fn.one = function(event, selector, data,  callback) {
+          return this.on(event, selector, data, callback, 1)
+      }
+      $.fn.trigger = function(event, args) {
+          event = (isString(event) || $.isPlainObject(event)) ? $.Event(event) : compatible(event)
+          event._args = args
+          return this.each(function() {
+              if (event.type in focus && typeof this[event.type] == "function") {
+                  this[event.type]()
+              } else if ('dispatchEvent' in this) {
+                  this.dispatchEvent(event)
+              } else {
+                  $(this).triggerHandler(event, args)
+              }
+          })
+      }
+      $.fn.triggerHandler = function(event, args) {
+          var e, result;
+          this.each(function(i, element){
+              e = createProxy(isString(event) ? $.Event(event) : event)
+              e._args = args
+              e.target = element
+              $.each(findHandlers(element, event.type || event), function(i, handler){
+                  result = handler.proxy(e)
+                  if (e.isImmediatePropagationStopped()) {
+                      return false
+                  }
+              })
+          })
+          return result
+      }
+      $.fn.bind = function(event, data, callback){
+          return this.on(event, data, callback)
+      }
+      ;('focusin focusout focus blur load resize scroll unload click dblclick' + 'mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave' + 'change select keydown keypress keyup error').split(' ').forEach(function(event) {
+          $.fn[event] = function(callback) {
+              return (0 in arguments) ? this.bind(event, callback) : this.trigger(event)
+          }
+      })
+    })(Xepto);
     return Xepto
 }))
