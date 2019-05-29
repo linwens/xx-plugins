@@ -1430,5 +1430,9 @@
           }
       })
     })(Xepto);
+    // 增加 ajax相关
+    ;(function($) {
+
+    })(xepto);
     return Xepto
 }))
