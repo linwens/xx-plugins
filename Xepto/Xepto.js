@@ -1155,7 +1155,7 @@
           mouseleave: 'mouseout'
       }
       /**
-       * 1、compatible：函数用来修正 event 对象的浏览器差异，向 event 对象中添加了 几个处理兼容的函数及熟悉。如：isDefaultPrevented、isImmediatePropagationStopped、isPropagationStopped 几个方法，对不支持 timeStamp 的浏览器，向 event 对象中添加 timeStamp 属性。
+       * 1、compatible：函数用来修正 event 对象的浏览器差异，向 event 对象中添加了 几个处理兼容的函数及属性。如：isDefaultPrevented、isImmediatePropagationStopped、isPropagationStopped 几个方法，对不支持 timeStamp 的浏览器，向 event 对象中添加 timeStamp 属性。
        * 2、zid方法：给函数增加标识符，方便查找
        * 3、remove方法：
        * 4、findHandlers方法：
@@ -1436,23 +1436,105 @@
          * 一些变量
          * 1、jsonType:
          * 2、htmlType:
+         * 3、originAnchor： 生成一个a元素，用于存放url数据
+         * 4、blankRE： 匹配是否为空
+         * 5、scriptTypeRE: 
+         * 6、xmlTypeRE: 
+         * 
          */
         var jsonType = 'aplication/json';
         var htmlType = 'text/html';
+        var originAnchor = document.createElement('a'); 
+            originAnchor.href = window.location.href;
+        var blankRE = /^\s*$/;
+        // (?:pattern)非获取匹配
+        var scriptTypeRE = /^(?:text|application)\/javascript/i;
+        var xmlTypeRE = /^(?:text|application)\/xml/i;
         /**
          * 一些方法函数
          * 1、empty函数：用于作为默认的回调函数
+         * 2、ajaxStart: 触发全局的 ajaxStart 事件
+         * 3、triggerGlobal：触发全局的 ajaxStart 事件
+         * 4、triggerAndReturn：用来触发一个事件，并且如果该事件禁止浏览器默认事件时，返回 false
+         * 5、serializeData方法：序列化请求参数, 这里更多的是基于请求方式调用不同的序列化函数
+         * 6、appendQuery方法: 在 url 后面拼接参数 url?key=value&key2=value
+         * 7、serialize方法: 序列化参数
+         * 8、mimeToDataType方法: 返回dataType类型
+         * 9、ajaxDataFilter方法: 过滤请求成功后的响应数据
+         * 10、ajaxSuccess方法：
+         * 11、ajaxError方法：
          */
         function empty() {}
-        function ajaxStart(setting) {
+        function ajaxStart(settings) {
             if (settings.global && $.active++ === 0) { // i++会在语句执行完以后再自增
                 triggerGlobal(settings, null, 'ajaxStart')
             }
         }
+        function triggerGlobal(settings, context, eventName, data) {
+          if (settings.global) {
+            return triggerAndReturn(context || document, eventName, data)
+          }
+        }
+        function triggerAndReturn(context, eventName, data) {
+          var event = $.Event(eventName) // 可以创建一个新的事件，再用trigger触发他
+          $(context).trigger(event, data)
+          return !event.isDefaultPrevented()
+        }
+        function serializeData(options) {
+          
+          if (options.processData && options.data && $.type(options.data) != "string") {
+            // traditional属性: 是否使用传统的浅层序列化方式序列化 data 参数，默认为 false，例如有 data 为 {p1:'test1', p2: {nested: 'test2'} ，在 traditional 为 false 时，会序列化成 p1=test1&p2[nested]=test2， 在为 true 时，会序列化成 p1=test&p2=[object+object]；
+            options.data = $.param(options.data, options.traditional)
+          }
+          if (options.data && (!options.type || options.type.toUpperCase() == 'GET' || 'jsonp' == options.dataType)) {
+            options.url = appendQuery(options.url, options.data),
+            options.data = undefined
+          }
+        }
+        function appendQuery(url, query) {
+          if (query == '') return url
+          return (url + '&' + query).replace(/[&?]{1,2}/, '?')
+        }
+        function serialize(params, obj, traditional, scope) {
+          var type, array = $.isArray(obj), hash = $.isPlainObject(obj);
+          $.each(obj, function(key, value) {
+            type = $.type(value)
+            if (scope) {
+              key = traditional ? scope : scope + '[' + ((hash || type == 'object' || type == 'array') ? key : '') + ']'
+            }
+            if (!scope && array) {
+              params.add(value.name, value.value)
+            } else if (type == "array" || (!traditional && type == "object")) {
+              serialize(params, value, traditional, key)
+            } else {
+              params.add(key, value)
+            }
+          })
+        }
+        function mimeToDataType(mime) {
+          // 可能的一种情况是这样的： application/javascript; charset=UTF-8
+          if (mime) mime = mime.split(';', 2)[0]
+          return mime && (mime == htmlType ? 'html' : (mime == jsonType ? 'json' : ( scriptTypeRE.test(mime) ? 'script' : xmlTypeRE.test(mime) && 'xml' ))) || 'text'
+        }
+        function ajaxDataFilter(data, type, settings) {
+          if (settings.dataFilter == empty) return data
+          var context = settings.context;
+          return settings.dataFilter.call(context, data, type)
+        }
+        function ajaxSuccess() {
+          
+        }
+        function ajaxError() {}
         /**
          * 1、ajax方法:
          * 2、ajaxSettings: 保存ajax的默认配置
-         * 3、active
+         * 3、active: 标记正在请求的 ajax 数量，初始时为 0
+         * 4、param方法: param 方法用来序列化参数，内部调用的是 serialize 方法，并且在容器 params 上定义了一个 add 方法，供 serialize 调用
+         * 5、ajaxJSONP方法: 
+         * 6、
+         * 7、
+         * 8、
+         * 9、
          */
         $.ajax = function(options) {
             var settings = $.extend({}, options || {}),
@@ -1464,6 +1546,118 @@
                 }
             }
             ajaxStart(settings)
+            // 以下部分都在整理传参
+            if (!settings.crossDomain) { // 如果设置了不能跨域，但实际情况下跨域了，就设置为可跨域
+              urlAnchor = document.createElement('a');
+              urlAnchor.href = settings.url
+              urlAnchor.href = urlAnchor.href
+              settings.crossDomain = (originAnchor.protocol + '//' + originAnchor.host) !== (urlAnchor.protocol + '//' + urlAnchor.host)
+            }
+
+            if (!settings.url) {
+              settings.url = window.location.toString() // 返回当前页面的完整url地址
+            }
+            // 如果请求地址包含 # (hash哈希值)，剔除 # 因为 hash 并不会传递给后端
+            if ((hashIndex = settings.url.indexOf('#')) > -1) {
+              settings.url = settings.url.slice(0, hashIndex)
+            }
+            serializeData(settings)
+
+            var dataType = settings.dataType,
+                // /\?.+=\?/用来匹配类似于： ?fdaffdfasfda=?； .+表示1个或多个任意字符
+                hasPlaceholder = /\?.+=\?/.test(settings.url);
+            if (hasPlaceholder) {
+              dataType = 'jsonp'
+            }
+            // 通过加时间戳的方式，阻止浏览器请求的缓存
+            if (settings.cache = false || (
+              (!options || options.cache !== true) && ('script' == dataType || 'jsonp' == dataType)
+            )) {
+              settings.url = appendQuery(settings.url, '_=' + Date.now())
+            }
+            // 跨区请求时，给请求的链接增加一些占位符，用于jsonp的传参
+            if ('jsonp' == dataType) {
+              if (!hasPlaceholder) {
+                // settings.jsonp: 请求时，携带回调函数名的参数名，默认为 callback
+                settings.url = appendQuery(settings.url, settings.jsonp ? (settings.jsonp + '=?') : settings.jsonp === false ? '' : 'callback=?')
+              }
+              return $.ajaxJSONP(settings, deferred)
+            }
+            // 以下开始设置请求头信息
+            var mine = settings.accepts[dataType],
+                headers = {},
+                setHeader = function(name, value) {
+                  headers[name.toLowerCase()] = [name, value]
+                },
+                // \w- 等价于[A-Za-z0-9_-]， 的值为test匹配到的正则中()里的内容
+                protocol = /^([\w-]+:)\/\//.test(settings.url) ? RegExp.$1 : window.location.protocol,
+                xhr = settings.xhr(),
+                // setRequestHeader() 是设置HTTP请求头部的方法。此方法必须在  open() 方法和 send()   之间调用。如果多次对同一个请求头赋值，只会生成一个合并了多个值的请求头。
+                nativeSetHeader = xhr.setRequestHeader,
+                abortTimeout;
+            if (deferred) {
+              deferred.promise(xhr)
+            }
+            if (!settings.crossDomain) {
+              setHeader('X-Requested-With', 'XMLHttpRequest')
+            }
+            setHeader('Accept', mime || '*/*')
+            // mimeType: 覆盖响应的 MIME 类型，可以是 json、 jsonp、 script、 xml、 html、 或者 text
+            if (mime = settings.mimeType || mime) {
+              if (mime.indexOf(',') > -1) {
+                // split方法的第二个参数指定返回数组的长度
+                mime = mime.split(',', 2)[0]
+              }
+              // overrideMimeType 方法是指定一个MIME类型用于替代服务器指定的类型，使服务端响应信息中传输的数据按照该指定MIME类型处理,此方法必须在send方法之前调用方为有效。
+              xhr.overrideMimeType && xhr.overrideMimeType(mime)
+            }
+            // settings.contentType: 设置 Content-Type 请求头
+            if (settings.contentType || (settings.contentType !== false && settings.data && settings.type.toUpperCase() != 'GET')) {
+              setHeader('Content-Type', settings.contentType || 'application/x-www-form-urlencoded')
+            }
+            // settings.headers: 设置 HTTP 请求头
+            if (settings.headers) {
+              for (name in settings.headers) {
+                setHeader(name, settings.headers[name])
+              }
+            }
+            xhr.setRequestHeader = setHeader;
+            // 在浏览器响应过程中，每当 readyState 属性改变时，就会触发onreadystatechange事件
+            xhr.onreadystatechange = function() {
+              if (xhr.readyState == 4) {
+                xhr.onreadystatechange = empty
+                clearTimeout(abortTimeout)
+                var result, error = false;
+                if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304 || (xhr.status == 0 && protocol == 'file:')) {
+                  // 
+                  dataType = dataType || mimeToDataType(settings.mimeType || xhr.getResponseHeader('content-type'))
+                  if (xhr.responseType == 'arraybuffer' || xhr.responseType == 'blob') {
+                    result = xhr.response
+                  } else {
+                    result = xhr.responseText
+                    try {
+                      result = ajaxDataFilter(result, dataType, settings)
+                      if (dataType == 'script') {
+                        // 用 (1, eval) ，而不是直接用 eval 呢，是为了确保 eval 执行的作用域是在 window 下
+                        (1, eval)(result)
+                      } else if (dataType == 'xml') {
+                        result = xhr.responseXML
+                      } else if (dataType == 'json') {
+                        result = blankRE.test(result) ? null : $.parseJSON(result)
+                      }
+                    } catch (e) {
+                      error = e
+                    }
+                    if (error) {
+                      return ajaxError(error, 'parsererror', xhr, settings, deferred)
+                    }
+                  }
+                  ajaxSuccess(result, xhr, settings, deferred)
+                } else {
+                  ajaxError(xhr.statusText || null, xhr.status ? 'error' : 'abort', xhr, settings, deferred)
+                }
+              }
+            }
         }
         // 默认配置项
         $.ajaxSettings = {
@@ -1472,8 +1666,8 @@
             success: empty,
             error: empty,
             complete: empty,
-            context: null,
-            global: true,
+            context: null, // 用于设置Ajax相关回调函数的上下文，默认为 window
+            global: true, //请求将触发全局Ajax事件处理程序，设置为 false 将不会触发全局 Ajax 事件
             xhr: function() {
                 return new window.XMLHttpRequest()
             },
@@ -1484,13 +1678,29 @@
                 html: htmlType,
                 text: 'text/plain'
             },
-            crossDomain: false,
+            crossDomain: false, // 是否可以跨越
             timeout: 0,
-            processData: true,
-            cache: true,
-            dataFilter: empty
+            processData: true, // 对于非Get请求。默认将 data 转换为字符串
+            cache: true, // 是否允许浏览器缓存 GET 请求，默认为 false
+            dataFilter: empty // 指定一个函数，如何对响应数据进行过滤
         }
         $.active = 0
+        $.param = function(obj, traditional) {
+          var params = [];
+          params.add = function(key, value) {
+            if ($.isFunction(value)) {
+              value = value()
+            }
+            if (value == null) {
+              value = ""
+            }
+            this.push(escape(key) + '=' + escape(value))
+          }
+          serialize(params, obj, traditional)
+          // %20代表 空格 ；
+          return params.join('&').replace(/%20/g, '+')
+        }
+        $.ajaxJSONP = function() {}
     })(xepto);
     return Xepto
 }))
