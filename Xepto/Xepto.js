@@ -1463,6 +1463,9 @@
          * 9、ajaxDataFilter方法: 过滤请求成功后的响应数据
          * 10、ajaxSuccess方法：
          * 11、ajaxError方法：
+         * 12、ajaxComplete方法：
+         * 13、ajaxBeforeSend方法：请求发出前，执行自己的函数逻辑(如果配置了的话)
+         * 
          */
         function empty() {}
         function ajaxStart(settings) {
@@ -1521,10 +1524,44 @@
           var context = settings.context;
           return settings.dataFilter.call(context, data, type)
         }
-        function ajaxSuccess() {
-          
+        function ajaxSuccess(data, xhr, settings, deferred) {
+          var context = settings.context, status = 'success';
+          settings.success.call(context, data, status. xhr)
+          if (deferred) {
+            deferred.resolveWith(context, [data, status, xhr])
+          }
+          triggerGlobal(settings, context, 'ajaxSuccess', [xhr, settings, data])
+          ajaxComplete(status, xhr, settings)
         }
-        function ajaxError() {}
+        function ajaxError(error, type, xhr, settings, deferred) {
+          var context = settings.context;
+          settings.error.call(context, xhr, type, error)
+          if (deferred) {
+            deferred.rejectWith(context, [xhr, type, error])
+          }
+          triggerGlobal(settings, context, 'ajaxError', [xhr, settings, error || type])
+          ajaxComplete(type, xhr, settings)
+        }
+        function ajaxComplete(status, xhr, settings) {
+          var context = settings.context;
+          settings.complete.call(context, xhr, status)
+          triggerGlobal(settings, context, 'ajaxComplete', [xhr, settings])
+          ajaxStop(settings)
+        }
+        function ajaxStop(settings) {
+          // 如果 --$.active 不为0 就说明还有在执行的ajax，就不调用全局的关闭ajax的方法
+          if (settings.global && !(--$.active)) {
+            triggerGlobal(settings, null, 'ajaxStop')
+          }
+        }
+        function ajaxBeforeSend(xhr, settings) {
+          // settings.beforeSend：函数里调用可配置的回调函数，回调函数里的逻辑自己写，走不通就返回false，从而阻止了ajax请求的发出
+          var context = settings.context;
+          if (settings.beforeSend.call(context, xhr, settings) === false || triggerGlobal(settings, context, 'ajaxBeforeSend', [xhr, settings]) === false) {
+            return false
+          }
+          triggerGlobal(settings, context, 'ajaxSend', [xhr, settings])
+        }
         /**
          * 1、ajax方法:
          * 2、ajaxSettings: 保存ajax的默认配置
@@ -1658,11 +1695,38 @@
                 }
               }
             }
+            if (ajaxBeforeSend(xhr, settings) === false) {
+              // 如果该请求已被发出，XMLHttpRequest.abort() 方法将终止该请求。当一个请求被终止，它的 readyState 属性将被置为0
+              xhr.abort()
+              ajaxError(null, 'abort', xhr, settings, deferred)
+              return xhr
+            }
+            var async = 'async' in settings ? settings.async : true
+            xhr.open(settings.type, settings.url, async, settings.username, settings.password)
+            // xhrFields 用来存放xhr的配置信息，实现可配置，默认是空的
+            if (settings.xhrFields) {
+              for (name in settings.xhrFields) {
+                xhr[name] = settings.xhrFields[name]
+              }
+            }
+            // 这里的nativeSetHeader = xhr.setRequestHeader
+            for (name in headers) {
+              nativeSetHeader.apply(xhr, headers[name])
+            }
+            if (settings.timeout > 0) {
+              abortTimeout = setTimeout(function() {
+                xhr.onreadystatechange = empty
+                xhr.abort()
+                ajaxError(null, 'timeout', xhr, settings, deferred)
+              }, settings.timeout)
+            }
+            xhr.send(settings.data ? settings.data : null)
+            return xhr
         }
         // 默认配置项
         $.ajaxSettings = {
             type: 'GET',
-            beforeSend: empty,
+            beforeSend: empty, // 请求发出前调用的函数
             success: empty,
             error: empty,
             complete: empty,
@@ -1700,7 +1764,20 @@
           // %20代表 空格 ；
           return params.join('&').replace(/%20/g, '+')
         }
-        $.ajaxJSONP = function() {}
+        $.ajaxJSONP = function(options, deferred) {
+          if (!('type' in options)) return $.ajax(options)
+            var _callbackName = options.jsonpCallback,
+                callbackName = ($.isFunction(_callbackName) ? _callbackName() : _callbackName ) || ('Xepto' + (jsonpID++)),
+                script = document.createElement('script'),
+                originalCallback = window[callbackName],
+                responseData,
+                abort = function(errorType) {
+                  $(script).triggerHandler('error', errorType || 'abort')
+                },
+                xhr = {abort: abort},
+                abortTimeout;
+
+        }
     })(xepto);
     return Xepto
 }))
