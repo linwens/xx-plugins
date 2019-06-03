@@ -38,6 +38,25 @@
             // ensures that the handler will be executed in the context of `obj`:
             $('div.test').on('click', $.proxy(handler, obj2))
             $('p.aa').triggerHandler('click')
+
+            $.ajax({
+              type: 'GET',
+              url: 'http://localhost:8988/ajax/test/jsonp',
+              // data to be added to query string:
+              data: { 
+                first_name: '林',
+                last_name: '文书',
+              },
+              // type of data we are expecting in return:
+              dataType: 'jsonp',
+              timeout: 300,
+              context: $('body'),
+              success: function(data){
+              },
+              error: function(xhr, type){
+                alert('Ajax error!')
+              }
+            })
         })
     </script>
 </body>

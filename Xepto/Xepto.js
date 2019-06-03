@@ -381,6 +381,7 @@
         $.type = type;
         $.isFunction = isFunction;
         $.isWindow = isWindow;
+        $.isArray = isArray;
         $.isPlainObject = isPlainObject;
         $.each = function(elements, callback) {
             var i, key;
@@ -1450,6 +1451,7 @@
         // (?:pattern)非获取匹配
         var scriptTypeRE = /^(?:text|application)\/javascript/i;
         var xmlTypeRE = /^(?:text|application)\/xml/i;
+        var jsonpID = +new Date();
         /**
          * 一些方法函数
          * 1、empty函数：用于作为默认的回调函数
@@ -1748,7 +1750,8 @@
             cache: true, // 是否允许浏览器缓存 GET 请求，默认为 false
             dataFilter: empty // 指定一个函数，如何对响应数据进行过滤
         }
-        $.active = 0
+        $.active = 0;
+        var escape = encodeURIComponent;
         $.param = function(obj, traditional) {
           var params = [];
           params.add = function(key, value) {
@@ -1764,20 +1767,58 @@
           // %20代表 空格 ；
           return params.join('&').replace(/%20/g, '+')
         }
+        // jsonp:实现跨域其实是利用了script可以请求跨域资源的特点，所以实现 jsonp 的基本步骤就是向页面动态插入一个 script 标签，在请求地址上带上需要传递的参数，以及给后端的回调函数callback，后端根据前端传参获得结果后，把数据当作回调函数的参数返回给前端callback({...})，前端调用回调函数进行解释
         $.ajaxJSONP = function(options, deferred) {
           if (!('type' in options)) return $.ajax(options)
-            var _callbackName = options.jsonpCallback,
-                callbackName = ($.isFunction(_callbackName) ? _callbackName() : _callbackName ) || ('Xepto' + (jsonpID++)),
-                script = document.createElement('script'),
-                originalCallback = window[callbackName],
-                responseData,
-                abort = function(errorType) {
-                  $(script).triggerHandler('error', errorType || 'abort')
-                },
-                xhr = {abort: abort},
-                abortTimeout;
+          var _callbackName = options.jsonpCallback,
+              callbackName = ($.isFunction(_callbackName) ? _callbackName() : _callbackName ) || ('Xepto' + (jsonpID++)),
+              script = document.createElement('script'),
+              originalCallback = window[callbackName],
+              responseData,
+              abort = function(errorType) {
+                $(script).triggerHandler('error', errorType || 'abort')
+              },
+              xhr = {abort: abort},
+              abortTimeout;
+          if (deferred) {
+            deferred.promise(xhr)
+          }
+          $(script).on('load error', function(e, errorType) {
+            clearTimeout(abortTimeout)
+            $(script).off().remove()
+            if (e.type == 'error' || !responseData) {
+              ajaxError(null, errorType || 'error', xhr, options, deferred)
+            } else {
+              ajaxSuccess(responseData[0], xhr, options, deferred)
+            }
 
+            window[callbackName] = originalCallback
+            if (responseData && $.isFunction(originalCallback)) {
+              originalCallback(responseData[0])
+            }
+
+            originalCallback = responseData = undefined
+          })
+
+          if (ajaxBeforeSend(xhr, options) === false) {
+            abort('abort')
+            return xhr
+          }
+          // 后端返回的数据就被当作参数传给这个回掉函数callback(arguments)
+          window[callbackName] = function(){
+            responseData = arguments
+          }
+          script.src = options.url.replace(/\?(.+)=\?/, '?$1=' + callbackName)
+          document.head.appendChild(script)
+
+          if (options.timeout > 0) {
+            abortTimeout = setTimeout(function(){
+              abort('timeout')
+            }, options.timeout)
+          }
+          //+? 为什么返回xhr? responseData如何放到success的回调里的？
+          return xhr
         }
-    })(xepto);
+    })(Xepto);
     return Xepto
 }))
