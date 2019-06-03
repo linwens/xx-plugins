@@ -1441,7 +1441,9 @@
          * 4、blankRE： 匹配是否为空
          * 5、scriptTypeRE: 
          * 6、xmlTypeRE: 
-         * 
+         * 7、jsonpID：用jsonp的时候，给callback函数命名
+         * 8、rscript：匹配<script>标签
+         * 9、
          */
         var jsonType = 'aplication/json';
         var htmlType = 'text/html';
@@ -1452,6 +1454,7 @@
         var scriptTypeRE = /^(?:text|application)\/javascript/i;
         var xmlTypeRE = /^(?:text|application)\/xml/i;
         var jsonpID = +new Date();
+        var rscript = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
         /**
          * 一些方法函数
          * 1、empty函数：用于作为默认的回调函数
@@ -1467,7 +1470,7 @@
          * 11、ajaxError方法：
          * 12、ajaxComplete方法：
          * 13、ajaxBeforeSend方法：请求发出前，执行自己的函数逻辑(如果配置了的话)
-         * 
+         * 14、parseArguments方法：针对ajax的一下快捷方法（调用时不用传参），进行一些参数格式化的工作
          */
         function empty() {}
         function ajaxStart(settings) {
@@ -1564,16 +1567,30 @@
           }
           triggerGlobal(settings, context, 'ajaxSend', [xhr, settings])
         }
+        function parseArguments(url, data, success, dataType) {
+          if ($.isFunction(data)) {
+            dataType = success, success = data, data = undefined
+          }
+          if (!$.isFunction(success)) {
+            dataType = success, success = undefined
+          }
+          return {
+            url: url,
+            data: data,
+            success: success,
+            dataType: dataType
+          }
+        }
         /**
          * 1、ajax方法:
          * 2、ajaxSettings: 保存ajax的默认配置
          * 3、active: 标记正在请求的 ajax 数量，初始时为 0
          * 4、param方法: param 方法用来序列化参数，内部调用的是 serialize 方法，并且在容器 params 上定义了一个 add 方法，供 serialize 调用
-         * 5、ajaxJSONP方法: 
-         * 6、
-         * 7、
-         * 8、
-         * 9、
+         * 5、ajaxJSONP方法: 跨域请求数据
+         * 6、get方法：
+         * 7、post方法：
+         * 8、getJSON方法：
+         * 9、fn.load方法：load 方法是用 ajax 的方式，请求一个 html 文件，并将请求的文件插入到页面中
          */
         $.ajax = function(options) {
             var settings = $.extend({}, options || {}),
@@ -1623,7 +1640,7 @@
               return $.ajaxJSONP(settings, deferred)
             }
             // 以下开始设置请求头信息
-            var mine = settings.accepts[dataType],
+            var mime = settings.accepts[dataType],
                 headers = {},
                 setHeader = function(name, value) {
                   headers[name.toLowerCase()] = [name, value]
@@ -1819,6 +1836,40 @@
           //+? 为什么返回xhr? responseData如何放到success的回调里的？
           return xhr
         }
+        $.get = function(/* url, data, success, dataType */) {
+          return $.ajax(parseArguments.apply(null, arguments))
+        }
+        $.post = function(/* url, data, success, dataType */) {
+          var options = parseArguments.apply(null, arguments)
+          options.type = 'POST'
+          return $.ajax(options)
+        }
+        $.getJSON = function(/* url, data, success */) {
+          var options = parseArguments.apply(null, arguments)
+          options.dataType = 'json'
+          return $.ajax(options)
+        }
+        $.fn.load = function(url, data, success) {
+          if (!this.length) return this;
+          var self = this,
+              parts = url.split(/\s/),
+              selector,
+              options = parseArguments(url, data, success),
+              callback = options.success;
+          // url的结构是这样的： '/some/html/foo.html #bar'
+          if (parts.length > 1) {
+            options.url = parts[0],
+            selector = parts[1] // 在html中找指定的元素
+          }
+          options.success = function(response) {
+            // 新建一个div，在div里放请求过来的html元素，再在html里找到指定选择器的元素
+            self.html(selector ? $('<div>').html(response.replace(rscript, "")).find(selector) : response)
+            callback && callback.apply(self, arguments)
+          }
+          $.ajax(options)
+          return this
+        }
+
     })(Xepto);
     return Xepto
 }))
