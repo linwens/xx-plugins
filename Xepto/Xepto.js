@@ -1995,18 +1995,19 @@
           state = "pending",
           promise = {
             state: function() {
-                return state
+              return state
             },
             always: function() {
-                deferred.done(arguments).fail(arguments)
-                return this
+              deferred.done(arguments).fail(arguments)
+              return this
             },
             then: function(/* fnDone [, fnFailed [, fnProgress]] */) {
-                var fns = arguments
-                return Deferred(function(defer) {
+              var fns = arguments
+              return Deferred(function(defer) {
                 $.each(tuples, function(i, tuple) {
-                    var fn = $.isFunction(fns[i]) &&fns[i]
-                    deferred[tuple[1]](function() {
+                  var fn = $.isFunction(fns[i]) &&fns[i]
+                    // tuple[1],对应：done、fail、progress
+                  deferred[tuple[1]](function() {
                     var returned = fn && fn.apply(this, arguments)
                     if (returned && $.isFunction(returned.promise)) {
                         returned.promise()
@@ -2018,17 +2019,17 @@
                             values = fn ? [returned] : arguments
                         defer[tuple[0] + "With"](context, values)
                     }
-                    })
+                  })
                 })
                 fns = null
-                }).promise()
+              }).promise()
             },
             promise: function(obj) {
                 return obj != null ? $.extend( obj, promise ) : promise
             }
           },
           deferred = {};
-        
+        // 遍历tuples给promise添加方法
         $.each(tuples, function(i, tuple) {
           var list = tuple[2],
               stateString = tuple[3];
