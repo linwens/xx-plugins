@@ -9,8 +9,15 @@
     <!-- <script src="https://zeptojs.com/zepto.js"></script> -->
 </head>
 <body>
-    <form action="ssss" style="display: none;">
+    <form id="form">
         <label for="">fdadadfsf</label>
+        <input type="text" name="a">
+        <input type="text" name="e">
+        <input type="checkbox" name="b" value="1">
+        <input type="checkbox" name="b" value="2">
+        <input type="radio" name="c" value="jame">
+        <input type="radio" name="c" value="wade">
+        <p id="sub_btn1">提交</p>
     </form>
     <div class="test" style="width:2999px;height:2222px;">
         <p data-name="james" class="bb">钩子</p>
@@ -58,6 +65,15 @@
               }
             })
         })
+    </script>
+    <script>
+      $('#sub_btn1').on('click', function(){
+        var aa = $('#form').serialize();
+        var bb = $('#form').serializeArray();
+        console.log(aa);
+        console.log(bb);
+
+      })
     </script>
 </body>
 </html>
