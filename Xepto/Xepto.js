@@ -2145,5 +2145,88 @@
         return this
       }
     })(Xepto);
+    // fx 模块 负责css3动画
+    ;(function($, undefined) {
+      /**
+       * 1、eventPrefix:
+       * 2、prefix:
+       * 3、testEl:
+       * 4、:
+       * 5、:
+       * 6、
+       * 7、
+       * 8、
+       */
+      var eventPrefix, prefix = '',
+          testEl = document.createElement('div');
+      /**
+       * 1、normalizeEvent方法：
+       * 2、
+       * 
+       */
+      function normalizeEvent(name) {
+        return eventPrefix ? eventPrefix + name : name.toLowerCase()
+      }
+      /**
+       * ---fx对象---
+       * 1、off： 检测浏览器是否支持css3动画，具体检测是否支持过渡transition，支持过渡事件
+       * 2、speeds：用来设置动画时间的对象
+       * 3、cssPrefix：
+       * 4、transitionEnd：
+       * 5、animationEnd：
+       */
+      $.fx = {
+        off: (eventPrefix === undefined && testEl.style.transitionProperty === undefined),
+        speeds: {_default: 400, fast: 200, slow: 600},
+        cssPrefix: prefix,
+        transitionEnd: normalizeEvent('TransitionEnd'),
+        animationEnd: normalizeEvent('AnimationEnd')
+      }
+      /**
+       * 1、animate方法：主要用来整理参数，然后调用anim方法
+       * 2、anim方法：
+       */
+      $.fn.animate = function(properties, duration, ease, callback, delay) {
+        if ($.isFunction(duration)) {
+          callback = duration, ease = undefined, duration = undefined
+        }
+        if ($.isFunction(ease)) {
+          callback = ease, ease = undefined
+        }
+        if ($.isPlainObject(duration)) {
+          ease = duration.easing, callback = duration.complete, delay = duration.delay, duration = duration.duration
+        }
+        if (duration) {
+          // duration可以是个字符串，fast/slow
+          duration = (typeof duration == 'number' ? duration : ($.fx.speeds[duration] || $.fx.speeds._default)) /1000
+        }
+        if (delay) {
+          delay = parseFloat(delay) /1000
+        }
+        return this.anim(properties, duration, ease, callback, delay)
+      }
+      $.fn.anim = function(properties, duration, ease, callback, delay) {
+        var key, cssValues = {}, 
+            cssProperties, transforms = '',
+            that = this,
+            wrappedCallback,
+            endEvent = $.fx.transitionEnd,
+            fired = false;
+        if (duration === undefined) {
+          duration = $.fx.speeds._default / 1000
+        }
+        if (delay = undefined) {
+          delay = 0
+        }
+        // 不支持过渡transition，直接跳动画结束
+        if ($.fx.off) {
+          duration = 0
+        }
+        if (typeof properties == 'string') {
+          cssValues[animationName] = properties
+          
+        }
+      }
+    })(Xepto);
     return Xepto
 }))
