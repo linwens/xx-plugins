@@ -2159,13 +2159,20 @@
        */
       var eventPrefix, prefix = '',
           testEl = document.createElement('div');
+      var supportedTransforms = /^((translate|rotate|scale)(X|Y|Z|3d)?|matrix(3d)?|perspective|skew(X|Y)?)$/i; // 检测变形的属性
+      var transform, // 变形
+          transitionProperty, transitionDuration, transitionTiming, transitionDelay, // 过渡
+          animationName, animationDuration, animationTiming, animationDelay; // 动画
       /**
-       * 1、normalizeEvent方法：
-       * 2、
+       * 1、normalizeEvent方法：修正事件名
+       * 2、dasherize方法：驼峰 转成 短横
        * 
        */
       function normalizeEvent(name) {
         return eventPrefix ? eventPrefix + name : name.toLowerCase()
+      }
+      function dasherize(str) {
+        return str.replace(/[A-Z]/g, '-$1').toLowerCase()
       }
       /**
        * ---fx对象---
@@ -2224,7 +2231,29 @@
         }
         if (typeof properties == 'string') {
           cssValues[animationName] = properties
-          
+          cssValues[animationDuration] = duration + 's'
+          cssValues[animationDelay] = delay + 's'
+          cssValues[animationTiming] = (ease || 'linear')
+          endEvent = $.fx.animationEnd
+        } else {
+          for (key in properties) {
+            if (supportedTransforms.test(key)) {
+              transforms += key + '(' + properties[key] + ')'
+            } else {
+              cssValues[key] = properties[key],
+              cssProperties.push(dasherize(key))
+            }
+          }
+          if (transforms) {
+              cssValues[transform] = transforms,
+              cssProperties.push(transform)
+          }
+          if (duration > 0 && typeof properties === 'object') {
+              cssValues[transitionProperty] = cssProperties.join(', ')
+              cssValues[transitionDuration] = duration + 's'
+              cssValues[transitionDelay] = delay + 's'
+              cssValues[transitionTiming] = (ease || 'linear')
+          }
         }
       }
     })(Xepto);
