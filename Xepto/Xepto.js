@@ -2151,10 +2151,10 @@
        * 1、eventPrefix:
        * 2、prefix:
        * 3、testEl:
-       * 4、:
-       * 5、:
-       * 6、
-       * 7、
+       * 4、supportedTransforms:
+       * 5、transform:
+       * 6、vendors: 定义了浏览器的样式前缀 key 和事件前缀 value
+       * 7、cssReset: 保存加完前缀后的样式规则，用来过渡或动画完成后， 重置样式
        * 8、
        */
       var eventPrefix, prefix = '',
@@ -2163,6 +2163,9 @@
       var transform, // 变形
           transitionProperty, transitionDuration, transitionTiming, transitionDelay, // 过渡
           animationName, animationDuration, animationTiming, animationDelay; // 动画
+      var vendors = { Webkit: 'webkit', Moz: '', O: 'o'};
+      var cssReset = {}
+
       /**
        * 1、normalizeEvent方法：修正事件名
        * 2、dasherize方法：驼峰 转成 短横
@@ -2174,6 +2177,28 @@
       function dasherize(str) {
         return str.replace(/[A-Z]/g, '-$1').toLowerCase()
       }
+      // 浏览器前缀检测
+      if (testEl.style.transform === undefined) {
+        $.each(vendors, function(vendor, event) {
+          if (testEl.style[vendor + 'TransitionProperty'] !== undefined) {
+            console.log(event)
+            prefix = '-' + vendor.toLowerCase() + '-'
+            eventPrefix = event // event指的是什么？
+            return false
+          }
+        })
+      }
+      // 初始化过渡或者动画的属性值 '',用于重置
+      transform = prefix + 'transform'
+      cssReset[transitionProperty = prefix + 'transition-property'] =
+      cssReset[transitionDuration = prefix + 'transition-duration'] =
+      cssReset[transitionDelay = prefix + 'transition-delay'] =
+      cssReset[transitionTiming = prefix + 'transition-timing-funcion'] =
+      cssReset[animationName = prefix + 'animation-name'] =
+      cssReset[animationDuration = prefix + 'animation-duration'] =
+      cssReset[animationDelay = prefix + 'animation-delay'] =
+      cssReset[animationTiming = prefix + 'animation-timing-funcion'] = ''
+
       /**
        * ---fx对象---
        * 1、off： 检测浏览器是否支持css3动画，具体检测是否支持过渡transition，支持过渡事件
@@ -2218,7 +2243,7 @@
             that = this,
             wrappedCallback,
             endEvent = $.fx.transitionEnd,
-            fired = false;
+            fired = false; // 用来标识回调函数是否执行完毕
         if (duration === undefined) {
           duration = $.fx.speeds._default / 1000
         }
@@ -2236,6 +2261,7 @@
           cssValues[animationTiming] = (ease || 'linear')
           endEvent = $.fx.animationEnd
         } else {
+          cssProperties = []
           for (key in properties) {
             if (supportedTransforms.test(key)) {
               transforms += key + '(' + properties[key] + ')'
@@ -2255,7 +2281,45 @@
               cssValues[transitionTiming] = (ease || 'linear')
           }
         }
+
+        wrappedCallback = function(event) {
+          // 解绑事件
+          if (typeof event !== 'undefined') {
+            // event.target: 返回触发事件的元素; event.currentTarget: 返回绑定事件的元素
+            if (event.target !== event.currentTarget) return // 如果不相等，说明触发事件的元素不是绑定元素，阻止冒泡，提高性能
+            $(event.target).unbind(endEvent, wrappedCallback)
+          } else {
+            $(this).unbind(endEvent, wrappedCallback)
+          }
+          fired = true
+          $(this).css(cssReset)
+          callback && callback.call(this)
+        }
+
+        if (duration > 0) {
+          this.bind(endEvent, wrappedCallback)
+          // 这里是针对老安卓进行兼容, 如果wrappedCallback没执行，就通过定时器执行，但如果执行了，就在定时器里直接return掉
+          setTimeout(function(){
+            if (fired) return
+            wrappedCallback.call(that)
+          }, ((duration + delay) * 1000) + 25)
+        }
+        // 存在元素对象，就读取 clientLeft 属性，会触发页面的回流，使得动画的样式设置上去时可以立即执行
+        this.size() && this.get(0).clientLeft
+        this.css(cssValues)
+
+        // 过渡时间小于等于0，立即执行回调
+        if (duration <= 0) {
+          setTimeout(function() {
+            that.each(function() {
+              wrappedCallback.call(this)
+            })
+          }, 0)
+        }
+        return this
       }
+
+      testEl = null
     })(Xepto);
     return Xepto
 }))
