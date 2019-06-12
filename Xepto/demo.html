@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Xepto</title>
+    <script src="./Xepto.js"></script>
+    <!-- <script src="https://zeptojs.com/zepto.js"></script> -->
+</head>
+<body>
+  <div id="some_element" style="width: 20px;height:20px;background: red;"></div>
+    <form id="form">
+        <label for="">fdadadfsf</label>
+        <input type="text" name="a">
+        <input type="text" name="e">
+        <input type="checkbox" name="b" value="1">
+        <input type="checkbox" name="b" value="2">
+        <input type="radio" name="c" value="jame">
+        <input type="radio" name="c" value="wade">
+        <p id="sub_btn1">提交</p>
+    </form>
+    <div class="test" style="width:2999px;height:2222px;">
+        <p data-name="james" class="bb">钩子</p>
+        <p class="aa">sss</p>
+        <p><a href="javascript:;">链接</a></p>
+        <p class="aa">ddddxxx</p>
+    </div>
+    <p style="width:20px;height: 200px;word-wrap:break-word;">发色鹅1福大幅度反对法鹅鹅</p>
+    <script type="text/javascript">
+        $('<p>A note below the label</p>').appendTo('div')
+    </script>
+    <script>
+        $(function($){
+            $('a').wrap('<span>')
+            $('p').wrapAll('<li>')
+            $('p.aa').wrapInner('<span>')
+            var a = $.Event('change', { bubbles: false })
+            console.log(a)
+            window.onload = function(e) {
+              console.log(e)
+            }
+            var obj = {name: 'Zepto'},obj2 = {name: 'Xepto'};
+            handler = function(){ console.log("hello from + ", this.name) }
+
+            // ensures that the handler will be executed in the context of `obj`:
+            $('div.test').on('click', $.proxy(handler, obj2))
+            $('p.aa').triggerHandler('click')
+
+            $.ajax({
+              type: 'GET',
+              url: 'http://localhost:8988/ajax/test/jsonp',
+              // data to be added to query string:
+              data: { 
+                first_name: '林',
+                last_name: '文书',
+              },
+              // type of data we are expecting in return:
+              dataType: 'jsonp',
+              timeout: 300,
+              context: $('body'),
+              success: function(data){
+              },
+              error: function(xhr, type){
+                alert('Ajax error!')
+              }
+            })
+        })
+    </script>
+    <script>
+      $("#some_element").animate({
+        opacity: 0.25,
+        left:
+        '50px',
+        color:
+        '#abcdef',
+        rotateZ:
+        '45deg',
+        translate3d: '0,10px,0'
+        }, 500,
+        'ease-out')
+    </script>
+</body>
+</html>
