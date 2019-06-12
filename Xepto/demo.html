@@ -9,6 +9,7 @@
     <!-- <script src="https://zeptojs.com/zepto.js"></script> -->
 </head>
 <body>
+  <div id="some_element" style="width: 20px;height:20px;background: red;"></div>
     <form id="form">
         <label for="">fdadadfsf</label>
         <input type="text" name="a">
@@ -67,13 +68,17 @@
         })
     </script>
     <script>
-      $('#sub_btn1').on('click', function(){
-        var aa = $('#form').serialize();
-        var bb = $('#form').serializeArray();
-        console.log(aa);
-        console.log(bb);
-
-      })
+      $("#some_element").animate({
+        opacity: 0.25,
+        left:
+        '50px',
+        color:
+        '#abcdef',
+        rotateZ:
+        '45deg',
+        translate3d: '0,10px,0'
+        }, 500,
+        'ease-out')
     </script>
 </body>
 </html>

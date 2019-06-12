@@ -1425,6 +1425,9 @@
       $.fn.bind = function(event, data, callback){
           return this.on(event, data, callback)
       }
+      $.fn.unbind = function(event, callback){
+        return this.off(event, callback)
+      }
       ;('focusin focusout focus blur load resize scroll unload click dblclick' + 'mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave' + 'change select keydown keypress keyup error').split(' ').forEach(function(event) {
           $.fn[event] = function(callback) {
               return (0 in arguments) ? this.bind(event, callback) : this.trigger(event)
